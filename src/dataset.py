@@ -2,7 +2,10 @@ import os
 
 import numpy as np
 import pandas as pd
+import tensorflow as tf
 from sklearn.model_selection import train_test_split
+
+from src.data_utils import rle2mask
 
 
 class SegmentationDataset:
@@ -21,9 +24,6 @@ class SegmentationDataset:
 
         self.label_dir_path = self._set_label_path()
         self.df = self._prepare_dataset()
-
-        if len(os.listdir(self.label_dir_path)) == 0:
-            self._preprocess_save_mask_labels()
 
     def _set_label_path(self):
 
@@ -91,21 +91,26 @@ class SegmentationDataset:
             .reset_index(drop=True)
         )
 
-    def _preprocess_save_mask_labels(self):
+    def preprocess_save_mask_labels(self):
         """
         Prepreocesses segmentation masks for each image and saves them as .png files locally for easier loading
         into tf.data pipeline.
 
         """
         img_ids = self.df.ImageId.unique().tolist()
-        label_seq = self.get_label_sequence(img_ids)
+        label_seq = self.get_label_sequence(img_ids, label_type="inline")
+        
+        if len(os.listdir(self.label_dir_path)) == 0:
+            print(f"Preprocessing RLE mask labels and saving out as .png files to {self.label_dir_path}")
 
-        for img_id, label_element in zip(img_ids, label_seq):
-            mask_tensor = self.prepare_mask_label(label_element)
-            tf.keras.utils.save_img(
-                path=os.path.join(self.label_dir_path, f"{img_id[:-4]}.png"),
-                x=mask_tensor,
-            )
+            for img_id, label_element in zip(img_ids, label_seq):
+                mask_tensor = self.prepare_mask_label(label_element)
+                tf.keras.utils.save_img(
+                    path=os.path.join(self.label_dir_path, f"{img_id[:-4]}.png"),
+                    x=mask_tensor,
+                )
+        else:
+            print("Segmentation masks have already been preprocessed and saved")
 
     def get_train_test_split(self, test_size=0.2):
         """
