@@ -1,4 +1,6 @@
+tensorflow==2.10.0
 numpy==1.19.4
 pandas==1.4.4
 matplotlib==3.5.3
+kaggle==1.5.12
 -e .
