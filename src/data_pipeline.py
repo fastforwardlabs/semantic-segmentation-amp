@@ -33,8 +33,6 @@ class SegmentationDataPipeline:
         self.pipeline_options = pipeline_options
 
     def __call__(self, img_seq, label_seq):
-        print("img:", type(img_seq), len(img_seq))
-        print("label:", type(label_seq), len(label_seq))
 
         img_ds = tf.data.Dataset.from_tensor_slices(img_seq).map(
             self.prepare_image, num_parallel_calls=self.pipeline_options["map_parallel"]
