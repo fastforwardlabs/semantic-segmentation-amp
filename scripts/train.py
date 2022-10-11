@@ -10,15 +10,44 @@ from src.data_pipeline import SegmentationDataPipeline
 
 IMG_SHAPE = (256, 1600)
 BATCH_SIZE = 8
-EPOCHS = 20
+EPOCHS = 10
 ANNOTATIONS_PATH = "data/train.csv"
 TRAIN_IMG_PATH = "data/train_images/"
 LOG_DIR = "logs/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
-def normalize(image, mask):
-    image = tf.cast(image, tf.float32) / 255.0
-    mask = tf.cast(mask, tf.float32) / 255.0
-    return image, mask
+# def dice_coeff(y_true, y_pred, epsilon=1e-6):
+#     """
+#     Soft dice loss calculation for arbitrary batch size, number of classes, and number of spatial dimensions.
+#     Assumes the `channels_last` format.
+
+#     Args:
+#         y_true: b x X x Y x c One hot encoding of ground truth
+#         y_pred: b x X x Y x c Network output, must sum to 1 over c channel (such as after softmax)
+#         epsilon: Used for numerical stability to avoid divide by zero errors
+        
+#     """
+#     axes = tuple(range(1, 3))
+#     numerator = 2.0 * tf.reduce_sum((y_pred * y_true), axis=axes)
+#     denominator = tf.reduce_sum(y_pred + y_true, axis=axes)
+
+#     return tf.reduce_mean((numerator + epsilon) / (denominator + epsilon))
+
+
+# def dice_loss(y_true, y_pred, epsilon=1e-6):
+#     return 1 - dice_coeff(y_true, y_pred, epsilon)
+
+def dice_coeff(y_true, y_pred):
+    smooth = 1.
+    y_true_f = layers.Flatten()(y_true)
+    y_pred_f = layers.Flatten()(y_pred)
+    intersection = tf.reduce_sum(y_true_f * y_pred_f)
+    score = (2. * intersection + smooth) / (tf.reduce_sum(y_true_f) + tf.reduce_sum(y_pred_f) + smooth)
+    return score
+
+def dice_loss(y_true, y_pred):
+    loss = 1 - dice_coeff(y_true, y_pred)
+    return loss
+
 
 def main():
 
@@ -31,12 +60,15 @@ def main():
 
     # create train/test & x/y splits
     train_imgs, test_imgs = sd.get_train_test_split(test_size=0.2)
-    X_train, y_train = sd.get_image_sequence(train_imgs), sd.get_label_sequence(
-        train_imgs, label_type="preprocessed"
-    )
-    X_test, y_test = sd.get_image_sequence(test_imgs), sd.get_label_sequence(
-        test_imgs, label_type="preprocessed"
-    )
+    
+    # small sample
+    # train_imgs = train_imgs[:8]
+    # test_imgs = test_imgs[:8]
+    
+    X_train = sd.get_image_sequence(train_imgs)
+    y_train = sd.get_label_sequence(train_imgs, label_type="preprocessed")
+    X_test = sd.get_image_sequence(test_imgs)
+    y_test = sd.get_label_sequence(test_imgs, label_type="preprocessed")
 
     # create dataset pipelines
     sdp = SegmentationDataPipeline(
@@ -50,20 +82,17 @@ def main():
             "prefetch": False,
         },
     )
+    
     train_dataset = sdp(X_train, y_train)
     test_dataset = sdp(X_test, y_test)
-    
-    train_dataset = train_dataset.map(normalize)
-    test_dataset = test_dataset.map(normalize)
-    
     
     # build model
     unet = unet_model(IMG_SHAPE)
     
     unet.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
-        loss="categorical_crossentropy",
-        metrics=["categorical_accuracy"],
+        optimizer=tf.keras.optimizers.Adam(learning_rate=0.005),
+        loss=dice_loss,
+        metrics=[dice_coeff]
     )
     
     callbacks = [

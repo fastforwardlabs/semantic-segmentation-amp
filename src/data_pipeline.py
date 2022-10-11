@@ -35,7 +35,7 @@ class SegmentationDataPipeline:
     def __call__(self, img_seq, label_seq):
 
         img_ds = tf.data.Dataset.from_tensor_slices(img_seq).map(
-            self.prepare_image, num_parallel_calls=self.pipeline_options["map_parallel"]
+            self.load_image, num_parallel_calls=self.pipeline_options["map_parallel"]
         )
         
         if self.label_type == "inline":
@@ -45,11 +45,11 @@ class SegmentationDataPipeline:
             
         elif self.label_type == "preprocessed":
             label_ds = tf.data.Dataset.from_tensor_slices(label_seq).map(
-                self.prepare_image, num_parallel_calls=self.pipeline_options["map_parallel"]
-            )
+                self.load_image, num_parallel_calls=self.pipeline_options["map_parallel"]
+            ).map(self.tf_add_background_channel, num_parallel_calls=self.pipeline_options["map_parallel"])
             
             
-        zip_ds = tf.data.Dataset.zip((img_ds, label_ds))
+        zip_ds = tf.data.Dataset.zip((img_ds, label_ds)).map(self.normalize)
 
         if self.pipeline_options["cache"]:
             print("Caching")
@@ -69,7 +69,7 @@ class SegmentationDataPipeline:
 
         return zip_ds
 
-    def prepare_image(self, img_path):
+    def load_image(self, img_path):
         """
         Loads and preprocesses image given a path.
 
@@ -83,6 +83,57 @@ class SegmentationDataPipeline:
         img = tf.image.convert_image_dtype(img, tf.float32)
 
         return img
+    
+    def load_mask_label(self, mask_label_path):
+        mask = np.load(mask_label_path.numpy().decode())
+        return mask
+
+
+    def tf_load_mask_label(self, mask_label_path):
+
+        mask = tf.py_function(
+            func=self.load_mask_label,
+            inp=[mask_label_path],
+            Tout=[tf.float32],
+        )
+
+        return mask[0]
+    
+    def add_background_channel(self, mask, max_value=255.0):
+        """
+        Prepends an additional channel to a mask label.
+
+        The additional channel assumes a value of `max_value` for each
+        pixel location that doesn't have a `max_value` in any of the existing
+        channels.
+
+        """
+
+        missing_pixels = np.sum(mask, axis=-1)
+
+        where_0 = np.where(missing_pixels == 0.0)
+        where_1 = np.where(missing_pixels == max_value)
+
+        missing_pixels[where_0] = max_value
+        missing_pixels[where_1] = 0.0
+
+        missing_pixels = np.expand_dims(missing_pixels, axis=-1)
+        mask = np.concatenate((missing_pixels, mask), axis=-1)
+
+        return mask
+
+
+    def tf_add_background_channel(self, mask):
+
+        mask = tf.py_function(
+            func=self.add_background_channel,
+            inp=[mask],
+            Tout=[tf.float32],
+        )
+
+        return mask[0]
+    
+    
 
     def prepare_mask_label(self, label_element):
         """
@@ -131,3 +182,8 @@ class SegmentationDataPipeline:
         )
         
         return mask[0]
+    
+    def normalize(self, image, mask):
+        image = tf.cast(image, tf.float32) / 255.0
+        mask = tf.cast(mask, tf.float32) / 255.0
+        return image, mask

@@ -103,12 +103,15 @@ class SegmentationDataset:
         if len(os.listdir(self.label_dir_path)) == 0:
             print(f"Preprocessing RLE mask labels and saving out as .png files to {self.label_dir_path}")
 
-            for img_id, label_element in zip(img_ids, label_seq):
+            for i, (img_id, label_element) in enumerate(zip(img_ids, label_seq)):
                 mask_tensor = self.prepare_mask_label(label_element)
                 tf.keras.utils.save_img(
                     path=os.path.join(self.label_dir_path, f"{img_id[:-4]}.png"),
                     x=mask_tensor,
                 )
+                # file_name = os.path.join(self.label_dir_path, f"{img_id[:-4]}.npy")
+                # np.save(file_name, mask_tensor)
+
         else:
             print("Segmentation masks have already been preprocessed and saved")
 
@@ -205,7 +208,7 @@ class SegmentationDataset:
             
             return [os.path.join(self.label_dir_path, f"{img_id[:-4]}.png") for img_id in img_ids]
 
-    def prepare_mask_label(self, label_element):
+    def prepare_mask_label(self, label_element, one_hot=True):
         """
         Prepares image annotation labels as matrix of binary mask channels.
 
@@ -236,6 +239,23 @@ class SegmentationDataset:
                 class_mask = class_mask[..., 0]  # take just one channel
                 mask[..., int(label) - 1] = class_mask
 
-        return mask
+#         # create "background" channel and add to mask
+#         missing_pixels = np.sum(mask, axis=-1)
 
-    
+#         where_0 = np.where(missing_pixels == 0.0)
+#         where_1 = np.where(missing_pixels == 1.0)
+
+#         missing_pixels[where_0] = 1.0
+#         missing_pixels[where_1] = 0.0
+
+#         missing_pixels = np.expand_dims(missing_pixels, axis=-1)
+#         mask = np.concatenate((missing_pixels, mask), axis=-1)
+
+        # for numerical vector instead of one-hot matrix of labels
+        if not one_hot:
+            mask = np.concatenate(
+                [np.zeros((self.img_height, self.img_width, 1)), mask], axis=-1
+            )
+            mask = np.argmax(mask, axis=-1, keepdims=True)
+
+        return mask

@@ -74,7 +74,7 @@ def plot_sample_batch(sample_batch):
     fig = plt.figure(figsize=(12, 18))
     fig.suptitle("Sample Batch Visualized")
 
-    x_batch = sample_batch[0][0] / 255
+    x_batch = sample_batch[0][0]
     y_batch = sample_batch[0][1]
 
     batch_size = x_batch.shape[0]
@@ -85,17 +85,17 @@ def plot_sample_batch(sample_batch):
 
     for i in range(batch_size):
         inner_grid = gridspec.GridSpecFromSubplotSpec(
-            5, 1, subplot_spec=outer_grid[i], wspace=0.1, hspace=0.1
+            6, 1, subplot_spec=outer_grid[i], wspace=0.1, hspace=0.1
         )
 
-        for j in range(5):
+        for j in range(6):
             if j == 0:
                 ax = plt.Subplot(fig, inner_grid[j])
-                ax.imshow(x_batch[i])
+                ax.imshow(x_batch[i], vmin=0., vmax=1.)
 
             else:
                 ax = plt.Subplot(fig, inner_grid[j])
-                ax.imshow(y_batch[i][..., j - 1])
+                ax.imshow(y_batch[i][..., j - 1],  vmin=0., vmax=1.)
 
             if j == 0:
                 ax.set_title(f"Ex {i}")
