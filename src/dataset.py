@@ -5,7 +5,7 @@ import pandas as pd
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
 
-from src.data_utils import rle2mask
+from src.data_utils import rle2mask, prepare_mask_label
 
 
 class SegmentationDataset:
@@ -99,12 +99,16 @@ class SegmentationDataset:
         """
         img_ids = self.df.ImageId.unique().tolist()
         label_seq = self.get_label_sequence(img_ids, label_type="inline")
-        
+
         if len(os.listdir(self.label_dir_path)) == 0:
-            print(f"Preprocessing RLE mask labels and saving out as .png files to {self.label_dir_path}")
+            print(
+                f"Preprocessing RLE mask labels and saving out as .png files to {self.label_dir_path}"
+            )
 
             for i, (img_id, label_element) in enumerate(zip(img_ids, label_seq)):
-                mask_tensor = self.prepare_mask_label(label_element)
+                mask_tensor = prepare_mask_label(
+                    label_element, self.img_height, self.img_width
+                )
                 tf.keras.utils.save_img(
                     path=os.path.join(self.label_dir_path, f"{img_id[:-4]}.png"),
                     x=mask_tensor,
@@ -168,20 +172,20 @@ class SegmentationDataset:
     def get_label_sequence(self, img_ids, label_type):
         """
         Formats label annotations for each image into a sequence taht can be used to create
-        a tf.data.Dataset. 
-        
+        a tf.data.Dataset.
+
             If label_type is "inline", sequence consistes of annotations (ClassID, EncodedPixels)
             for each image.
-        
+
             If label_type is "preprocessed", sequence consists of a list of image paths.
-    
-        
+
+
         Args:
             img_ids (list)
             label_type (str) - "preprocessed" or "inline"
 
         """
-        
+
         if label_type == "inline":
             label_dict = {
                 img_id: table.to_dict("list")
@@ -203,59 +207,10 @@ class SegmentationDataset:
                 label_elements.append(element)
 
             return label_elements
-        
+
         elif label_type == "preprocessed":
-            
-            return [os.path.join(self.label_dir_path, f"{img_id[:-4]}.png") for img_id in img_ids]
 
-    def prepare_mask_label(self, label_element, one_hot=True):
-        """
-        Prepares image annotation labels as matrix of binary mask channels.
-
-        Initializes empty matrix of desired size. Converts each RLE label to
-        binary mask, and inserts each of those masks in the appropriate matrix channel.
-
-        Args:
-            label_element (tf.Tensor: shape (2,5), dtype=string)
-            mask_height (int)
-            mask_width (int)
-
-        Returns:
-            tf.Tensor (float64)
-        """
-
-        mask = np.zeros((self.img_height, self.img_width, 4))
-
-        for i in range(len(label_element[1])):
-            label = label_element[0][i]
-            rle = label_element[1][i]
-
-            if rle != "-1":
-                class_mask = rle2mask(
-                    rle,
-                    img_size=(self.img_height, self.img_width),
-                    fill_color=(1),
-                )
-                class_mask = class_mask[..., 0]  # take just one channel
-                mask[..., int(label) - 1] = class_mask
-
-#         # create "background" channel and add to mask
-#         missing_pixels = np.sum(mask, axis=-1)
-
-#         where_0 = np.where(missing_pixels == 0.0)
-#         where_1 = np.where(missing_pixels == 1.0)
-
-#         missing_pixels[where_0] = 1.0
-#         missing_pixels[where_1] = 0.0
-
-#         missing_pixels = np.expand_dims(missing_pixels, axis=-1)
-#         mask = np.concatenate((missing_pixels, mask), axis=-1)
-
-        # for numerical vector instead of one-hot matrix of labels
-        if not one_hot:
-            mask = np.concatenate(
-                [np.zeros((self.img_height, self.img_width, 1)), mask], axis=-1
-            )
-            mask = np.argmax(mask, axis=-1, keepdims=True)
-
-        return mask
+            return [
+                os.path.join(self.label_dir_path, f"{img_id[:-4]}.png")
+                for img_id in img_ids
+            ]
