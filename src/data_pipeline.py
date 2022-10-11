@@ -64,7 +64,10 @@ class SegmentationDataPipeline:
                 )
             )
 
-        zip_ds = tf.data.Dataset.zip((img_ds, label_ds)).map(self.normalize)
+        zip_ds = tf.data.Dataset.zip((img_ds, label_ds)).map(
+            self.normalize,
+            num_parallel_calls=self.pipeline_options["map_parallel"],
+        )
 
         if self.pipeline_options["cache"]:
             print("Caching")
