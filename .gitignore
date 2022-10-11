@@ -140,3 +140,7 @@ dmypy.json
 
 # Project
 data/
+logs/
+.vscode-server
+.keras
+.nv
