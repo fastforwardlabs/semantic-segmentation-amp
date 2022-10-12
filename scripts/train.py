@@ -63,11 +63,11 @@ def train_model(
         img_shape=IMG_SHAPE,
         label_type="preprocessed",
         pipeline_options={
-            "map_parallel": tf.data.AUTOTUNE,  # off if None
+            "map_parallel": None,  # off if None
             "cache": False,
             "shuffle_buffer_size": False,  # off if False
             "batch_size": BATCH_SIZE,
-            "prefetch": tf.data.AUTOTUNE,  # off if False
+            "prefetch": False,  # off if False
         },
     )
 
@@ -87,9 +87,12 @@ def train_model(
         tf.keras.callbacks.ModelCheckpoint(
             os.path.join(log_dir, "best_model.h5"), save_best_only=True
         ),
-        CustomTensorBoard(
+        tf.keras.callbacks.TensorBoard(
             log_dir=log_dir, update_freq=100, histogram_freq=1, write_images=True
         ),
+        # CustomTensorBoard(
+        #     log_dir=log_dir, update_freq=100, histogram_freq=1, write_images=True
+        # ),
     ]
 
     hist = unet.fit(
