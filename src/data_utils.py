@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import tensorflow as tf
 from matplotlib import cm
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
@@ -62,48 +63,61 @@ def display_img_with_mask(df, image_id, display_classes=[]):
     plt.legend(handles=handles)
 
 
-def plot_sample_batch(sample_batch):
+def plot_sample_batch(x, y_true, y_pred):
     """
     Plots a sample batch of data (images and masks) from a
     Tensorflow Dataset.
 
     Args:
-        sample_batch - batch returned from tf dataset iterator
-            (e.g. sample_batch = list(tf_dataset.take(1).as_numpy_iterator()))
+        x - image batch of shape (b, h, w, 3)
+        y_true - binary ground truth mask batch of shape (b, h, w, 8)
+        y_pred - unet prediction batch of shape (b, h, w, 8)
 
     """
-    fig = plt.figure(figsize=(12, 18))
+    fig = plt.figure(figsize=(18, 20))
     fig.suptitle("Sample Batch Visualized")
 
-    x_batch = sample_batch[0][0]
-    y_batch = sample_batch[0][1]
+    x_batch = x
+    y_batch = y_true
+    y_pred = create_mask(y_pred)
 
     batch_size = x_batch.shape[0]
     n_cols = 2
     n_rows = int(batch_size / n_cols)
 
-    outer_grid = gridspec.GridSpec(n_rows, n_cols, wspace=0)
+    outer_grid = gridspec.GridSpec(n_rows, n_cols, wspace=0.1, hspace=0.2)
 
     for i in range(batch_size):
         inner_grid = gridspec.GridSpecFromSubplotSpec(
-            6, 1, subplot_spec=outer_grid[i], wspace=0.1, hspace=0.1
+            6, 2, subplot_spec=outer_grid[i], wspace=0.01, hspace=0.01
         )
 
         for j in range(6):
             if j == 0:
-                ax = plt.Subplot(fig, inner_grid[j])
+                ax = plt.Subplot(fig, inner_grid[j, 0])
                 ax.imshow(x_batch[i], vmin=0.0, vmax=1.0)
 
+                ax_true = plt.Subplot(fig, inner_grid[j, 1])
+                ax_true.imshow(x_batch[i], vmin=0.0, vmax=1.0)
+
             else:
-                ax = plt.Subplot(fig, inner_grid[j])
-                ax.imshow(y_batch[i][..., j - 1], vmin=0.0, vmax=1.0)
+                ax = plt.Subplot(fig, inner_grid[j, 0])
+                ax.imshow(y_batch[i][..., j - 1], vmin=0.0, vmax=1.0, cmap="cividis")
+
+                ax_true = plt.Subplot(fig, inner_grid[j, 1])
+                ax_true.imshow(
+                    y_pred[i][..., j - 1], vmin=0.0, vmax=1.0, cmap="cividis"
+                )
 
             if j == 0:
-                ax.set_title(f"Ex {i}")
+                ax.set_title(f"Ex {i}: Ground Truth Mask")
+                ax_true.set_title(f"Ex {i}: Predicted Mask")
 
             ax.axis("off")
+            ax_true.axis("off")
 
             fig.add_subplot(ax)
+            fig.add_subplot(ax_true)
 
     plt.show()
 
@@ -145,3 +159,18 @@ def prepare_mask_label(label_element, img_height=256, img_width=1600, one_hot=Tr
         mask = np.argmax(mask, axis=-1, keepdims=True)
 
     return mask
+
+
+def create_mask(y_pred):
+    """
+    Creats a tensor of binary masks from the unet model softmax output.
+
+    Args:
+        y_pred (np.ndarray) - of shape (b, h, w, 5)
+
+    """
+
+    pred_mask = tf.argmax(y_pred, axis=-1)
+    pred_mask = tf.one_hot(pred_mask, 5)
+
+    return pred_mask.numpy()
