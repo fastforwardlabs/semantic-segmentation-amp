@@ -3,8 +3,12 @@ from typing import Optional, Dict
 import tensorflow as tf
 
 
-def dice_coeff(y_true, y_pred):
-    smooth = 1.0
+def dice_coeff(y_true, y_pred, smooth=1e-6):
+
+    # remove background channel from loss calculation
+    y_true = y_true[:, :, :, 1:]
+    y_pred = y_pred[:, :, :, 1:]
+
     y_true_f = tf.keras.layers.Flatten()(y_true)
     y_pred_f = tf.keras.layers.Flatten()(y_pred)
     intersection = tf.reduce_sum(y_true_f * y_pred_f)
@@ -29,6 +33,11 @@ def bce_dice_loss(y_true, y_pred):
 
 def tversky(y_true, y_pred, smooth=1e-6):
     # Focal Tversky loss, brought to you by:  https://github.com/nabsabraham/focal-tversky-unet
+
+    # remove background channel from loss calculation
+    y_true = y_true[:, :, :, 1:]
+    y_pred = y_pred[:, :, :, 1:]
+
     y_true_pos = tf.keras.layers.Flatten()(y_true)
     y_pred_pos = tf.keras.layers.Flatten()(y_pred)
     true_pos = tf.reduce_sum(y_true_pos * y_pred_pos)
