@@ -1,4 +1,5 @@
-from typing import Optional, Dict
+from collections import defaultdict
+from typing import Optional, Dict, List
 
 import tensorflow as tf
 
@@ -77,3 +78,66 @@ class CustomTensorBoard(tf.keras.callbacks.TensorBoard):  # type: ignore
             with tf.summary.record_if(True), self._train_writer.as_default():
                 for name, value in logs.items():
                     tf.summary.scalar("batch_" + name, value, step=self._train_step)
+
+
+def dice_coeff_per_class(y_true, y_pred, smooth=1e-6):
+    """
+    Calculates per class dice similarity coefficient.
+
+    Args:
+        y_true (np.ndarray) - of shape (b, h, w, c)
+        y_pred (np.ndarray) - of shape (b, h, w, c)
+
+    Returns:
+        metrics (dict) - dict of metrics where keys map to channels of input matrix
+
+
+    """
+
+    metrics = {}
+
+    for class_idx in range(y_true.shape[-1]):
+
+        y_true_class = y_true[..., class_idx]
+        y_pred_class = y_pred[..., class_idx]
+
+        y_true_pos = tf.keras.layers.Flatten()(y_true_class)
+        y_pred_pos = tf.keras.layers.Flatten()(y_pred_class)
+
+        true_pos = tf.reduce_sum(y_true_pos * y_pred_pos)
+        false_neg = tf.reduce_sum(y_true_pos * (1 - y_pred_pos))
+        false_pos = tf.reduce_sum((1 - y_true_pos) * y_pred_pos)
+
+        score = (2.0 * true_pos + smooth) / (
+            2.0 * true_pos + false_pos + false_neg + smooth
+        )
+
+        metrics[class_idx] = score.numpy()
+
+    return metrics
+
+
+def evaluate_per_class_dice(dataset: tf.data.Dataset, model) -> Dict:
+    """
+    Evaluates a model on a given dataset to calculate _per class_ dice similarity coefficient.
+
+    Args:
+        dataset - tf dataset upon which to run evaluation
+        model - trained UNet model to use for inference
+
+    Returns:
+        class_scores
+
+    """
+
+    class_scores = defaultdict(list)
+
+    for x, y_true in dataset:
+        y_pred = model.predict(x)
+
+        batch_score = dice_coeff_per_class(y_true, y_pred)
+
+        for k, v in batch_score.items():
+            class_scores[k].append(v)
+
+    return class_scores
