@@ -50,7 +50,7 @@ def unet_model(input_shape, n_channels_bottleneck=1024):
     c4, p4 = encoder_block(p3, n_channels_bottleneck / 2)
 
     # bottleneck
-    b = conv_block(p4, 1024)
+    b = conv_block(p4, n_channels_bottleneck)
 
     # decoder upsampling (x4)
     d1 = decoder_block(b, c4, n_channels_bottleneck / 2)
