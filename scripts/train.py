@@ -47,7 +47,7 @@ def train_model(
     )
 
     # create train/test & x/y splits
-    train_imgs, test_imgs = sd.get_train_test_split(test_size=0.2)
+    train_imgs, test_imgs = sd.get_train_test_split(test_size=0.1)
 
     # small sample
     # train_imgs = train_imgs[:200]
@@ -71,8 +71,8 @@ def train_model(
         },
     )
 
-    train_dataset = sdp(X_train, y_train)
-    test_dataset = sdp(X_test, y_test)
+    train_dataset = sdp(X_train, y_train, is_train=True)
+    test_dataset = sdp(X_test, y_test, is_train=False)
 
     # build model
     unet = unet_model(IMG_SHAPE, n_channels_bottleneck)

@@ -32,7 +32,7 @@ class SegmentationDataPipeline:
         self.label_type = label_type
         self.pipeline_options = pipeline_options
 
-    def __call__(self, img_seq, label_seq):
+    def __call__(self, img_seq, label_seq, is_train=True):
 
         img_ds = tf.data.Dataset.from_tensor_slices(img_seq).map(
             self.load_image, num_parallel_calls=self.pipeline_options["map_parallel"]
@@ -68,6 +68,12 @@ class SegmentationDataPipeline:
             self.normalize,
             num_parallel_calls=self.pipeline_options["map_parallel"],
         )
+
+        if is_train:
+            print("AUGMENTING!!")
+            zip_ds = zip_ds.map(
+                self.augment, num_parallel_calls=self.pipeline_options["map_parallel"]
+            )
 
         if self.pipeline_options["cache"]:
             print("Caching")
@@ -169,4 +175,14 @@ class SegmentationDataPipeline:
     def normalize(self, image, mask):
         image = tf.cast(image, tf.float32) / 255.0
         mask = tf.cast(mask, tf.float32) / 255.0
+        return image, mask
+
+    def augment(self, image, mask):
+        # input_image, input_mask = img_and_mask
+
+        if tf.random.uniform(()) > 0.5:
+            # Random flipping of the image and mask
+            image = tf.image.flip_left_right(image)
+            mask = tf.image.flip_left_right(mask)
+
         return image, mask
