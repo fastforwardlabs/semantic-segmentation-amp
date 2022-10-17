@@ -36,6 +36,7 @@ def train_model(
     learning_rate: float,
     n_channels_bottleneck: int,
     loss_fn: str,
+    sample_weights: bool,
     log_dir: str,
 ):
 
@@ -50,8 +51,8 @@ def train_model(
     train_imgs, test_imgs = sd.get_train_test_split(test_size=0.1)
 
     # small sample
-    # train_imgs = train_imgs[:200]
-    # test_imgs = test_imgs[:50]
+    train_imgs = train_imgs[:200]
+    test_imgs = test_imgs[:50]
 
     X_train = sd.get_image_sequence(train_imgs)
     y_train = sd.get_label_sequence(train_imgs, label_type="preprocessed")
@@ -71,7 +72,15 @@ def train_model(
         },
     )
 
-    train_dataset = sdp(X_train, y_train, is_train=True)
+    if sample_weights:
+        print("Weighting each sample!")
+        train_sample_weights = sd.get_sample_weight_sequence(train_imgs)
+        train_dataset = sdp(
+            X_train, y_train, is_train=True, sample_weights=train_sample_weights
+        )
+    else:
+        train_dataset = sdp(X_train, y_train, is_train=True)
+
     test_dataset = sdp(X_test, y_test, is_train=False)
 
     # build model
@@ -133,16 +142,23 @@ if __name__ == "__main__":
         default="dice_loss",
         choices=["dice_loss", "bce_dice_loss", "tversky_loss", "focal_tversky_loss"],
     )
+    parser.add_argument(
+        "--sample_weights",
+        type=bool,
+        default=False,
+        help="Whether to apply sample weighting across classes to balance samples.",
+    )
 
     args = parser.parse_args()
 
-    log_dir = f'logs/unet-epochs_{args.n_epochs}-lr_{args.lr}-channels_{args.n_channels}-loss_{args.loss_fn}-{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}'
+    log_dir = f'logs/unet-epochs_{args.n_epochs}-lr_{args.lr}-channels_{args.n_channels}-loss_{args.loss_fn}-sw_{args.sample_weights}-{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}'
 
     hist = train_model(
         n_epochs=args.n_epochs,
         learning_rate=args.lr,
         n_channels_bottleneck=args.n_channels,
         loss_fn=args.loss_fn,
+        sample_weights=args.sample_weights,
         log_dir=log_dir,
     )
 

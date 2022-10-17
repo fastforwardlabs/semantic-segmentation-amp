@@ -32,10 +32,17 @@ class SegmentationDataPipeline:
         self.label_type = label_type
         self.pipeline_options = pipeline_options
 
-    def __call__(self, img_seq, label_seq, is_train=True):
+    def __call__(self, img_seq, label_seq, is_train=True, sample_weights=None):
 
-        img_ds = tf.data.Dataset.from_tensor_slices(img_seq).map(
-            self.load_image, num_parallel_calls=self.pipeline_options["map_parallel"]
+        img_ds = (
+            tf.data.Dataset.from_tensor_slices(img_seq)
+            .map(
+                self.load_image,
+                num_parallel_calls=self.pipeline_options["map_parallel"],
+            )
+            .map(
+                self.normalize, num_parallel_calls=self.pipeline_options["map_parallel"]
+            )
         )
 
         if self.label_type == "inline":
@@ -47,6 +54,10 @@ class SegmentationDataPipeline:
                 )
                 .map(
                     self.tf_add_background_channel,
+                    num_parallel_calls=self.pipeline_options["map_parallel"],
+                )
+                .map(
+                    self.normalize,
                     num_parallel_calls=self.pipeline_options["map_parallel"],
                 )
             )
@@ -62,12 +73,23 @@ class SegmentationDataPipeline:
                     self.tf_add_background_channel,
                     num_parallel_calls=self.pipeline_options["map_parallel"],
                 )
+                .map(
+                    self.normalize,
+                    num_parallel_calls=self.pipeline_options["map_parallel"],
+                )
             )
 
-        zip_ds = tf.data.Dataset.zip((img_ds, label_ds)).map(
-            self.normalize,
-            num_parallel_calls=self.pipeline_options["map_parallel"],
-        )
+        if sample_weights:
+            sample_weight_ds = tf.data.Dataset.from_tensor_slices(sample_weights)
+
+            zip_ds = tf.data.Dataset.zip((img_ds, label_ds, sample_weight_ds))
+
+        else:
+            zip_ds = tf.data.Dataset.zip((img_ds, label_ds))
+            # .map(
+            #     self.normalize,
+            #     num_parallel_calls=self.pipeline_options["map_parallel"],
+            # )
 
         if is_train:
             print("AUGMENTING!!")
@@ -172,12 +194,16 @@ class SegmentationDataPipeline:
 
         return mask[0]
 
-    def normalize(self, image, mask):
-        image = tf.cast(image, tf.float32) / 255.0
-        mask = tf.cast(mask, tf.float32) / 255.0
-        return image, mask
+    # def normalize(self, image, mask):
+    #     image = tf.cast(image, tf.float32) / 255.0
+    #     mask = tf.cast(mask, tf.float32) / 255.0
+    #     return image, mask
 
-    def augment(self, image, mask):
+    def normalize(self, image):
+        image = tf.cast(image, tf.float32) / 255.0
+        return image
+
+    def augment(self, image, mask, sample_weight=None):
         # input_image, input_mask = img_and_mask
 
         if tf.random.uniform(()) > 0.5:
@@ -185,4 +211,7 @@ class SegmentationDataPipeline:
             image = tf.image.flip_left_right(image)
             mask = tf.image.flip_left_right(mask)
 
-        return image, mask
+        if sample_weight is not None:
+            return image, mask, sample_weight
+        else:
+            return image, mask

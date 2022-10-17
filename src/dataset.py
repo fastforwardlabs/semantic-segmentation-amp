@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
+from sklearn.utils.class_weight import compute_class_weight
 
 from src.data_utils import rle2mask, prepare_mask_label
 
@@ -24,6 +25,8 @@ class SegmentationDataset:
 
         self.label_dir_path = self._set_label_path()
         self.df = self._prepare_dataset()
+        self.imgid_to_classid_mapping = self._imgid_to_classid_mapping()
+        self.class_weight_map = self._build_class_weight_map()
 
     def _set_label_path(self):
 
@@ -119,20 +122,18 @@ class SegmentationDataset:
         else:
             print("Segmentation masks have already been preprocessed and saved")
 
-    def get_train_test_split(self, test_size=0.2):
+    def _imgid_to_classid_mapping(self):
         """
-        Splits all images into train and test set.
+        Returns a pd.Series mapping img_id's to a designated class_id.
 
-        Split is made to stratify across image classes where non-defective
-        and mulitclass images are considered their own class.
-
-        Args:
-            test_size (float)
+        Class ID's include the four defect types (1,2,3,4), as well as ID's for
+        multiclass (-2) and non-defective (-1).
 
         Returns:
-            Tuple[List] of image_ids
+            pd.Series
 
         """
+
         # get unique defective images, assign class (-2 if multiclass)
         unique_image_defectclass = (
             self.df[self.df.EncodedPixels != -1]
@@ -148,19 +149,48 @@ class SegmentationDataset:
             .astype(int)
         )
 
-        unique_image_classes = pd.concat(
-            [unique_image_defectclass, unique_image_nondefectclass]
-        )
+        return pd.concat([unique_image_defectclass, unique_image_nondefectclass])
+
+    def get_train_test_split(self, test_size=0.2):
+        """
+        Splits all images into train and test set.
+
+        Split is made to stratify across image classes where non-defective
+        and mulitclass images are considered their own class.
+
+        Args:
+            test_size (float)
+
+        Returns:
+            Tuple[List] of image_ids
+
+        """
 
         train_imgs, test_imgs = train_test_split(
-            unique_image_classes,
+            self.imgid_to_classid_mapping,
             test_size=test_size,
             random_state=42,
             shuffle=True,
-            stratify=unique_image_classes,
+            stratify=self.imgid_to_classid_mapping,
         )
 
         return train_imgs.index.tolist(), test_imgs.index.tolist()
+
+    def _build_class_weight_map(self):
+        """
+        Builds a class weighting estimate for each class to help balance
+        the imbalanced samples from the dataset.
+
+        Returns:
+            dict
+        """
+        classes = np.sort(self.imgid_to_classid_mapping.unique())
+
+        cw = compute_class_weight(
+            class_weight="balanced", classes=classes, y=self.imgid_to_classid_mapping
+        )
+
+        return dict(zip(classes, cw))
 
     def get_image_sequence(self, img_ids):
         """
@@ -214,3 +244,14 @@ class SegmentationDataset:
                 os.path.join(self.label_dir_path, f"{img_id[:-4]}.png")
                 for img_id in img_ids
             ]
+
+    def get_sample_weight_sequence(self, img_ids):
+        """
+        Formats class weightings for each image in img_ids into a sequence (List) that can be used
+        to create tf.data.Dataset.
+
+        """
+        return [
+            self.class_weight_map[id]
+            for id in self.imgid_to_classid_mapping[img_ids].values
+        ]
