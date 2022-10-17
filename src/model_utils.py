@@ -1,6 +1,8 @@
 from collections import defaultdict
 from typing import Optional, Dict, List
 
+from tqdm import tqdm
+import numpy as np
 import tensorflow as tf
 
 
@@ -132,7 +134,7 @@ def evaluate_per_class_dice(dataset: tf.data.Dataset, model) -> Dict:
 
     class_scores = defaultdict(list)
 
-    for x, y_true in dataset:
+    for x, y_true in tqdm(dataset):
         y_pred = model.predict(x)
 
         batch_score = dice_coeff_per_class(y_true, y_pred)
@@ -140,4 +142,4 @@ def evaluate_per_class_dice(dataset: tf.data.Dataset, model) -> Dict:
         for k, v in batch_score.items():
             class_scores[k].append(v)
 
-    return class_scores
+    return {k: np.mean(v) for k, v in class_scores.items()}
