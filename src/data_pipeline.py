@@ -79,7 +79,7 @@ class SegmentationDataPipeline:
                 )
             )
 
-        if sample_weights:
+        if sample_weights is not None:
             sample_weight_ds = tf.data.Dataset.from_tensor_slices(sample_weights)
 
             zip_ds = tf.data.Dataset.zip((img_ds, label_ds, sample_weight_ds))

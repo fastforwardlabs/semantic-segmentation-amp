@@ -5,6 +5,7 @@ from matplotlib import cm
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import matplotlib.gridspec as gridspec
+from sklearn.utils.class_weight import compute_class_weight
 
 
 def rle2mask(rle_string, img_size=(256, 1600), fill_color=(1, 0, 0, 0.25)):
@@ -174,3 +175,51 @@ def create_mask(y_pred):
     pred_mask = tf.one_hot(pred_mask, 5)
 
     return pred_mask.numpy()
+
+
+def calculate_class_weight_map_ip(classes, imgid_to_classid_mapping):
+    """
+    Computes class based weight map that are inversely proportional (IP) to the class frequency.
+
+    Args:
+        classes (list) - list of class id's
+        imgid_to_classid_mapping (pd.Series) - mappint of imgid to classid's
+
+
+    Returns:
+        dict
+    """
+    classes = np.sort(classes)
+
+    weights = compute_class_weight(
+        class_weight="balanced", classes=classes, y=imgid_to_classid_mapping
+    )
+
+    return dict(zip(classes, np.around(weights, 4)))
+
+
+def calculate_class_weight_map_ens(beta, samples_per_cls, classes):
+    """
+    Computes class balanced weight map based on Effective Number of Samples (ENS).
+
+    Class Balanced Loss: ((1-beta)/(1-beta^n))
+
+    As described here: https://arxiv.org/pdf/1901.05555v1.pdf
+    Adapted from: https://github.com/vandit15/Class-balanced-loss-pytorch/blob/master/class_balanced_loss.py
+
+    Args:
+        beta (float) - hyperparam for class balanced loss
+        samples_per_cls (list) - list of size len(classes)
+        classes (list) - list of unique class_ids
+
+    Returns:
+        dict mapping of class_id to weight
+
+    """
+    classes = np.sort(classes)
+
+    effective_num = 1.0 - np.power(beta, samples_per_cls)
+    weights = (1.0 - beta) / np.array(effective_num)
+    weights = weights / np.sum(weights) * len(classes)
+
+    return dict(zip(classes, np.around(weights, 4)))

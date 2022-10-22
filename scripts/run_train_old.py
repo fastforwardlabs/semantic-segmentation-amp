@@ -6,28 +6,25 @@ import shutil
 
 import tensorflow as tf
 
-from src.model import unet_model
+from src.train import train_model
 from src.model_utils import (
-    CustomTensorBoard,
-    dice_coeff,
-    dice_loss,
-    bce_dice_loss,
     tversky,
     tversky_loss,
-    focal_tversky_loss,
+    tversky_axis,
+    tversky_loss_axis,
 )
-from src.dataset import SegmentationDataset
-from src.data_pipeline import SegmentationDataPipeline
 
 IMG_SHAPE = (256, 1600)
 BATCH_SIZE = 8
 ANNOTATIONS_PATH = "data/train.csv"
 TRAIN_IMG_PATH = "data/train_images/"
 LOSSES = {
-    "dice_loss": dice_loss,
-    "bce_dice_loss": bce_dice_loss,
     "tversky_loss": tversky_loss,
-    "focal_tversky_loss": focal_tversky_loss,
+    "tversky_loss_axis": tversky_loss_axis,
+}
+METRICS = {
+    "tversky": tversky,
+    "tversky_axis": tversky_axis,
 }
 
 
@@ -51,8 +48,8 @@ def train_model(
     train_imgs, test_imgs = sd.get_train_test_split(test_size=0.1)
 
     # small sample
-    train_imgs = train_imgs[:200]
-    test_imgs = test_imgs[:50]
+    # train_imgs = train_imgs[:200]
+    # test_imgs = test_imgs[:50]
 
     X_train = sd.get_image_sequence(train_imgs)
     y_train = sd.get_label_sequence(train_imgs, label_type="preprocessed")
@@ -89,7 +86,7 @@ def train_model(
     unet.compile(
         optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
         loss=LOSSES[loss_fn],
-        metrics=[dice_coeff, tversky],
+        metrics=[dice_coeff, tversky, tversky_axis],
     )
 
     callbacks = [
@@ -140,7 +137,14 @@ if __name__ == "__main__":
         "--loss_fn",
         type=str,
         default="dice_loss",
-        choices=["dice_loss", "bce_dice_loss", "tversky_loss", "focal_tversky_loss"],
+        choices=[
+            "dice_loss",
+            "dice_loss_old",
+            "bce_dice_loss",
+            "tversky_loss",
+            "tversky_loss_axis",
+            "focal_tversky_loss",
+        ],
     )
     parser.add_argument(
         "--sample_weights",

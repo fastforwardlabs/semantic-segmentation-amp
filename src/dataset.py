@@ -5,8 +5,14 @@ import pandas as pd
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
+from imblearn.over_sampling import RandomOverSampler
 
-from src.data_utils import rle2mask, prepare_mask_label
+from src.data_utils import (
+    rle2mask,
+    prepare_mask_label,
+    calculate_class_weight_map_ip,
+    calculate_class_weight_map_ens,
+)
 
 
 class SegmentationDataset:
@@ -18,7 +24,16 @@ class SegmentationDataset:
 
     """
 
-    def __init__(self, label_file, img_dir_path, img_shape):
+    def __init__(
+        self,
+        test_size,
+        label_file,
+        img_dir_path,
+        img_shape,
+        sample_weight_strategy="ens",
+        sample_weight_ens_beta=0.999,
+    ):
+        self.test_size = test_size
         self.label_file = label_file
         self.img_dir_path = img_dir_path
         self.img_height, self.img_width = img_shape
@@ -26,7 +41,13 @@ class SegmentationDataset:
         self.label_dir_path = self._set_label_path()
         self.df = self._prepare_dataset()
         self.imgid_to_classid_mapping = self._imgid_to_classid_mapping()
-        self.class_weight_map = self._build_class_weight_map()
+        self.class_weight_map = self._build_class_weight_map(
+            strategy=sample_weight_strategy, beta=sample_weight_ens_beta
+        )
+        print(self.class_weight_map)
+        self.train_imgs, self.test_imgs = self.get_train_test_split(
+            test_size=self.test_size
+        )
 
     def _set_label_path(self):
 
@@ -176,21 +197,79 @@ class SegmentationDataset:
 
         return train_imgs.index.tolist(), test_imgs.index.tolist()
 
-    def _build_class_weight_map(self):
+    def _build_class_weight_map(self, strategy="ens", beta=0.999):
         """
         Builds a class weighting estimate for each class to help balance
         the imbalanced samples from the dataset.
 
+        Supports two strategies:
+            Effective Number of Samples (ens)
+            Inversely Proportional (ip)
+
+        Args:
+            strategy (str) - "ens" or "ip"
+            beta (float) - hyperparam for ENS strategy
+
         Returns:
             dict
         """
-        classes = np.sort(self.imgid_to_classid_mapping.unique())
-
-        cw = compute_class_weight(
-            class_weight="balanced", classes=classes, y=self.imgid_to_classid_mapping
+        classes = (
+            self.imgid_to_classid_mapping.value_counts().sort_index().index.tolist()
+        )
+        samples_per_class = (
+            self.imgid_to_classid_mapping.value_counts().sort_index().tolist()
         )
 
-        return dict(zip(classes, cw))
+        if strategy == "ens":
+            return calculate_class_weight_map_ens(
+                beta=beta, samples_per_cls=samples_per_class, classes=classes
+            )
+        elif strategy == "ip":
+            return calculate_class_weight_map_ip(
+                classes=classes, imgid_to_classid_mapping=self.imgid_to_classid_mapping
+            )
+        else:
+            raise Exception("Must specify valid strategy: 'ens' or 'ip'.")
+
+    def oversample_train_set(self, train_imgs):
+        """
+        Apply naive random over-sampling to provided list of train-set image id's.
+
+        This function over samples for all classes other than multiclass, then combines
+        and shuffles all image_ids before returning.
+
+        """
+
+        print(
+            "Old Class Distribution: \n",
+            self.imgid_to_classid_mapping[train_imgs]
+            .value_counts(normalize=False)
+            .sort_index(),
+        )
+
+        ros = RandomOverSampler(random_state=42)
+
+        # remove multi-class examples from oversampling
+        img_class_ids = self.imgid_to_classid_mapping[train_imgs]
+        multiclass = img_class_ids[img_class_ids == -2]
+        img_class_ids = img_class_ids[img_class_ids != -2]
+
+        img_ids = img_class_ids.index.to_numpy().reshape(-1, 1)
+        class_ids = img_class_ids.to_numpy()
+        resampled_img_ids, resampled_class_ids = ros.fit_resample(img_ids, class_ids)
+
+        # combine and shuffle multi-class samples
+        resampled = pd.Series(
+            index=np.squeeze(resampled_img_ids), data=resampled_class_ids
+        )
+        combined = pd.concat((resampled, multiclass)).sample(frac=1, random_state=42)
+
+        print(
+            "New Class Distribution: \n",
+            combined.value_counts(normalize=False).sort_index(),
+        )
+
+        return list(combined.index)
 
     def get_image_sequence(self, img_ids):
         """
