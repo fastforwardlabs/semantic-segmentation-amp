@@ -4,13 +4,41 @@ import datetime
 import argparse
 import shutil
 
-from src.train import train_model
+from src.train2 import train_model
 from src.model_utils import (
     tversky,
     tversky_loss,
     tversky_axis,
-    tversky_loss_axis,
+    # tversky_loss_axis,
+    TverskyLossAxis,
 )
+
+
+from keras import backend as K
+from keras.losses import binary_crossentropy
+
+
+def dice_coef(y_true, y_pred, smooth=1):
+    y_true_f = K.flatten(y_true)
+    y_pred_f = K.flatten(y_pred)
+    intersection = K.sum(y_true_f * y_pred_f)
+    return (2.0 * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
+
+
+def dice_loss(y_true, y_pred):
+    smooth = 1.0
+    y_true_f = K.flatten(y_true)
+    y_pred_f = K.flatten(y_pred)
+    intersection = y_true_f * y_pred_f
+    score = (2.0 * K.sum(intersection) + smooth) / (
+        K.sum(y_true_f) + K.sum(y_pred_f) + smooth
+    )
+    return 1.0 - score
+
+
+def bce_dice_loss(y_true, y_pred):
+    return binary_crossentropy(y_true, y_pred) + dice_loss(y_true, y_pred)
+
 
 IMG_SHAPE = (256, 1600)
 BATCH_SIZE = 8
@@ -19,12 +47,11 @@ ANNOTATIONS_PATH = "data/train.csv"
 TRAIN_IMG_PATH = "data/train_images/"
 LOSSES = {
     "tversky_loss": tversky_loss,
-    "tversky_loss_axis": tversky_loss_axis,
+    # "tversky_loss_axis": tversky_loss_axis,
+    "tversky_loss_axis": TverskyLossAxis(),
+    "bce_dice_loss": bce_dice_loss,
 }
-METRICS = {
-    "tversky": tversky,
-    "tversky_axis": tversky_axis,
-}
+METRICS = {"tversky": tversky, "tversky_axis": tversky_axis, "dice_coef": dice_coef}
 
 
 if __name__ == "__main__":
@@ -54,6 +81,7 @@ if __name__ == "__main__":
         type=str,
         default="dice_loss",
         choices=[
+            "bce_dice_loss",
             "tversky_loss",
             "tversky_loss_axis",
         ],
@@ -90,7 +118,7 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    log_dir = f'logs_sw_experiment/unet-epochs_{args.n_epochs}-lr_{args.lr}-channels_{args.n_channels}-loss_{args.loss_fn}-sw_{args.sample_weights}-strategy_{args.sample_weight_strategy if args.sample_weights else "NA"}-beta_{args.sample_weight_ens_beta if args.sample_weights else "NA"}-small_sample_{args.small_sample}-resample_train_set_{args.resample_train_set}-{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}'
+    log_dir = f'logs_sigmoid_experiment/unet-epochs_{args.n_epochs}-lr_{args.lr}-channels_{args.n_channels}-loss_{args.loss_fn}-sw_{args.sample_weights}-strategy_{args.sample_weight_strategy if args.sample_weights else "NA"}-beta_{args.sample_weight_ens_beta if args.sample_weights else "NA"}-small_sample_{args.small_sample}-resample_train_set_{args.resample_train_set}-{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}'
 
     kwargs = {
         "n_epochs": args.n_epochs,

@@ -64,7 +64,7 @@ def display_img_with_mask(df, image_id, display_classes=[]):
     plt.legend(handles=handles)
 
 
-def plot_sample_batch(x, y_true, y_pred):
+def plot_sample_batch(x, y_true, y_pred, softmax_output=True):
     """
     Plots a sample batch of data (images and masks) from a
     Tensorflow Dataset.
@@ -80,7 +80,11 @@ def plot_sample_batch(x, y_true, y_pred):
 
     x_batch = x
     y_batch = y_true
-    y_pred = create_mask(y_pred)
+    n_channels = 4
+
+    if softmax_output:
+        y_pred = create_mask(y_pred)
+        n_channels = 5
 
     batch_size = x_batch.shape[0]
     n_cols = 2
@@ -90,10 +94,10 @@ def plot_sample_batch(x, y_true, y_pred):
 
     for i in range(batch_size):
         inner_grid = gridspec.GridSpecFromSubplotSpec(
-            6, 2, subplot_spec=outer_grid[i], wspace=0.01, hspace=0.01
+            n_channels + 1, 2, subplot_spec=outer_grid[i], wspace=0.01, hspace=0.01
         )
 
-        for j in range(6):
+        for j in range(n_channels + 1):
             if j == 0:
                 ax = plt.Subplot(fig, inner_grid[j, 0])
                 ax.imshow(x_batch[i], vmin=0.0, vmax=1.0)

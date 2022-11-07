@@ -1,0 +1,1 @@
+!tensorboard --logdir=logs_sw_experiment --port $CDSW_READONLY_PORT

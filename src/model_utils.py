@@ -68,7 +68,27 @@ def bce_dice_loss(y_true, y_pred):
     return loss
 
 
-def tversky_axis(y_true, y_pred, smooth=1e-6):
+class TverskyLossAxis(tf.keras.losses.Loss):
+    def call(self, y_true, y_pred, smooth=1e-6, batch_size=8):
+
+        # remove background channel from loss calculation
+        y_true = y_true[:, :, :, 1:]
+        y_pred = y_pred[:, :, :, 1:]
+
+        axes = tuple(range(1, 4))  # compute over H x W x C, preserve batch dimension
+
+        true_pos = tf.reduce_sum(y_true * y_pred, axis=axes)
+        false_neg = tf.reduce_sum(y_true * (1 - y_pred), axis=axes)
+        false_pos = tf.reduce_sum((1 - y_true) * y_pred, axis=axes)
+        alpha = 0.7
+
+        num = true_pos + smooth
+        den = true_pos + alpha * false_neg + (1 - alpha) * false_pos + smooth
+
+        return 1 - (num / tf.reduce_sum(den)) * batch_size
+
+
+def tversky_axis(y_true, y_pred, smooth=1e-6, batch_size=8):
     # Focal Tversky loss, brought to you by:  https://github.com/nabsabraham/focal-tversky-unet
 
     # remove background channel from loss calculation
@@ -85,7 +105,8 @@ def tversky_axis(y_true, y_pred, smooth=1e-6):
     num = true_pos + smooth
     den = true_pos + alpha * false_neg + (1 - alpha) * false_pos + smooth
 
-    return num / den
+    # return num / tf.reduce_sum(den)
+    return (num / tf.reduce_sum(den)) * batch_size
 
 
 def tversky_loss_axis(y_true, y_pred):

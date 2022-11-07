@@ -64,15 +64,14 @@ class SegmentationDataPipeline:
 
         elif self.label_type == "preprocessed":
             label_ds = (
-                tf.data.Dataset.from_tensor_slices(label_seq)
-                .map(
+                tf.data.Dataset.from_tensor_slices(label_seq).map(
                     self.load_image,
                     num_parallel_calls=self.pipeline_options["map_parallel"],
                 )
-                .map(
-                    self.tf_add_background_channel,
-                    num_parallel_calls=self.pipeline_options["map_parallel"],
-                )
+                # .map(
+                #     self.tf_add_background_channel,
+                #     num_parallel_calls=self.pipeline_options["map_parallel"],
+                # )
                 .map(
                     self.normalize,
                     num_parallel_calls=self.pipeline_options["map_parallel"],
