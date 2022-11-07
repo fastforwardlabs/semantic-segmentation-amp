@@ -141,6 +141,11 @@ dmypy.json
 # Project
 data/
 logs/
+logs2/
+logs2_old/
+logs3/
+logs_sigmoid_experiment/
+logs_sw_experiment/
 .vscode-server
 .keras
 .nv
