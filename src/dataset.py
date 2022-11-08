@@ -19,8 +19,18 @@ class SegmentationDataset:
     """
     Dataset utility class.
 
-    Provides functionality for preprocessing images and segmentation masks
-    into format combatiple with `tf.data`.
+    Provides functionality for loading/preprocessing images and segmentation masks
+    into format combatiple with `tf.data`, as well as functionality for general modeling strategies
+    like train/test splits and sampling strategies.
+
+    Attributes:
+        test_size (float) - fractional indication of held out test set size
+        label_file (str) - path to train.csv file provided with dataset
+        img_dir_path (str) - path to /train_images directory provided with dataset
+        img_shape (str) - height x width of working images
+        drop_classes (bool) - flag that toggels working with subset of image classes (excludes classes 1 & 2)
+        sample_weight_strategy (str) - specify strategy for calculating sample weights (ens or ip). See `_build_class_weight_map()`.
+        sample_weight_ens_beta (float) - see `_build_class_weight_map()` for details
 
     """
 
@@ -30,6 +40,7 @@ class SegmentationDataset:
         label_file,
         img_dir_path,
         img_shape,
+        drop_classes=True,
         sample_weight_strategy="ens",
         sample_weight_ens_beta=0.999,
     ):
@@ -37,6 +48,7 @@ class SegmentationDataset:
         self.label_file = label_file
         self.img_dir_path = img_dir_path
         self.img_height, self.img_width = img_shape
+        self.drop_classes = drop_classes
 
         self.label_dir_path = self._set_label_path()
         self.df = self._prepare_dataset()
@@ -44,7 +56,6 @@ class SegmentationDataset:
         self.class_weight_map = self._build_class_weight_map(
             strategy=sample_weight_strategy, beta=sample_weight_ens_beta
         )
-        print(self.class_weight_map)
         self.train_imgs, self.test_imgs = self.get_train_test_split(
             test_size=self.test_size
         )
@@ -61,6 +72,8 @@ class SegmentationDataset:
     def _prepare_dataset(self):
         df = self._load_dataset(self.label_file, self.img_dir_path)
         df = self._normalize_df(df)
+        if self.drop_classes:
+            df = self._drop_imgs_by_class(df, class_ids_to_drop=[1, 2])
         return df
 
     def _load_dataset(self, label_file, img_dir_path):
@@ -114,6 +127,39 @@ class SegmentationDataset:
             .sort_values(by=["ImageId", "ClassId"])
             .reset_index(drop=True)
         )
+
+    def _drop_imgs_by_class(self, df, class_ids_to_drop):
+        """
+        Utility to remove all data for specified class_id's.
+
+        This function will drop all images from the provided dataframe that correspond
+        to a defect of type class_ids_to_drop.
+
+        Args:
+            df (pd.DataFrame)
+            class_ids_to_drop (list)
+
+        Returns:
+            pd.DataFrame
+
+        """
+
+        if len(class_ids_to_drop)==0:
+            raise Exception("Must specify which classes to drop."
+            )
+
+        img_ids_to_drop = []
+        for img_id, table in df.groupby("ImageId")[["ClassId", "EncodedPixels"]]:
+
+            table_dict = table.to_dict("list")
+
+            for class_id in class_ids_to_drop:
+                if table_dict["EncodedPixels"][class_id] != -1:
+                    img_ids_to_drop.append(img_id)
+
+        df = df[~df.ImageId.isin(img_ids_to_drop)]
+
+        return df[~df.ClassId.isin(class_ids_to_drop)].reset_index(drop=True)
 
     def preprocess_save_mask_labels(self):
         """
@@ -280,14 +326,13 @@ class SegmentationDataset:
 
     def get_label_sequence(self, img_ids, label_type):
         """
-        Formats label annotations for each image into a sequence taht can be used to create
+        Formats label annotations for each image into a sequence that can be used to create
         a tf.data.Dataset.
 
             If label_type is "inline", sequence consistes of annotations (ClassID, EncodedPixels)
             for each image.
 
             If label_type is "preprocessed", sequence consists of a list of image paths.
-
 
         Args:
             img_ids (list)

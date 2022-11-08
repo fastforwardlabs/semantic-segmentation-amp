@@ -131,11 +131,11 @@ def prepare_mask_label(label_element, img_height=256, img_width=1600, one_hot=Tr
     """
     Prepares image annotation labels as matrix of binary mask channels.
 
-    Initializes empty matrix of desired size. Converts each RLE label to
-    binary mask, and inserts each of those masks in the appropriate matrix channel.
+    Initializes empty matrix of size n_classes (as inferred by shape of label_element).
+    Converts each RLE label to binary mask, and inserts each of those masks in the appropriate matrix channel.
 
     Args:
-        label_element (tf.Tensor: shape (2,5), dtype=string)
+        label_element (tf.Tensor: shape (2,n_classes), dtype=string)
         mask_height (int)
         mask_width (int)
 
@@ -143,11 +143,18 @@ def prepare_mask_label(label_element, img_height=256, img_width=1600, one_hot=Tr
         tf.Tensor (float64)
     """
 
-    mask = np.zeros((img_height, img_width, 4))
+    n_classes = len(label_element[1])
+    mask = np.zeros((img_height, img_width, n_classes))
 
-    for i in range(len(label_element[1])):
-        label = label_element[0][i].numpy()
-        rle = label_element[1][i].numpy()
+    for i in range(n_classes):
+        # label = label_element[0][i].numpy()
+        label = i
+
+        try:
+            rle = label_element[1][i].numpy()
+        except AttributeError:
+            rle = label_element[1][i]
+
 
         if rle != "-1":
             class_mask = rle2mask(
@@ -156,7 +163,7 @@ def prepare_mask_label(label_element, img_height=256, img_width=1600, one_hot=Tr
                 fill_color=(1),
             )
             class_mask = class_mask[..., 0]  # take just one channel
-            mask[..., int(label) - 1] = class_mask
+            mask[..., int(label)] = class_mask
 
     # for numerical vector instead of one-hot matrix of labels
     if not one_hot:
