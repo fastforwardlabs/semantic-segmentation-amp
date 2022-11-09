@@ -1,1 +1,1 @@
-!tensorboard --logdir=logs_sigmoid_experiment --port $CDSW_READONLY_PORT
+!tensorboard --logdir=logs --port $CDSW_READONLY_PORT
