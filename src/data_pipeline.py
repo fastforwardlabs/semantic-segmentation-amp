@@ -23,7 +23,7 @@ class SegmentationDataPipeline:
         pipeline_options={
             "map_parallel": tf.data.AUTOTUNE,  # off if None
             "cache": True,
-            "shuffle_buffer_size": 500,  # off if False
+            "shuffle_buffer_size": 25,  # off if False
             "batch_size": 8,
             "prefetch": tf.data.AUTOTUNE,  # off if False
         },
@@ -47,15 +47,14 @@ class SegmentationDataPipeline:
 
         if self.label_type == "inline":
             label_ds = (
-                tf.data.Dataset.from_tensor_slices(label_seq)
-                .map(
+                tf.data.Dataset.from_tensor_slices(label_seq).map(
                     self.tf_prepare_mask_label,
                     num_parallel_calls=self.pipeline_options["map_parallel"],
                 )
-                .map(
-                    self.tf_add_background_channel,
-                    num_parallel_calls=self.pipeline_options["map_parallel"],
-                )
+                # .map(
+                #     self.tf_add_background_channel,
+                #     num_parallel_calls=self.pipeline_options["map_parallel"],
+                # )
                 .map(
                     self.normalize,
                     num_parallel_calls=self.pipeline_options["map_parallel"],

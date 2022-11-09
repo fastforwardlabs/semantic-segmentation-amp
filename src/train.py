@@ -13,6 +13,7 @@ def train_model(
     n_epochs: int,
     learning_rate: float,
     n_channels_bottleneck: int,
+    n_channels_out: int,
     loss_fn: str,
     test_size: float,
     sample_weights: bool,
@@ -35,6 +36,7 @@ def train_model(
         n_epochs (int)
         learning_rate (float)
         n_channels_bottleneck (int)
+        n_channels_out (int)
         loss_fn (str)
         test_size (float)
         sample_weights (bool)
@@ -102,7 +104,7 @@ def train_model(
         pipeline_options={
             "map_parallel": None,  # off if None
             "cache": False,
-            "shuffle_buffer_size": False,  # off if False
+            "shuffle_buffer_size": 50,  # off if False
             "batch_size": batch_size,
             "prefetch": False,  # off if False
         },
@@ -120,7 +122,7 @@ def train_model(
     test_dataset = sdp(X_test, y_test, is_train=False)
 
     # build model
-    unet = unet_model(img_shape, n_channels_bottleneck)
+    unet = unet_model(img_shape, n_channels_out, n_channels_bottleneck)
 
     unet.compile(
         optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
@@ -149,4 +151,4 @@ def train_model(
         callbacks=callbacks,
     )
 
-    return hist
+    return hist, test_dataset

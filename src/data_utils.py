@@ -64,7 +64,7 @@ def display_img_with_mask(df, image_id, display_classes=[]):
     plt.legend(handles=handles)
 
 
-def plot_sample_batch(x, y_true, y_pred, softmax_output=True):
+def plot_sample_batch(x, y_true, y_pred, softmax_output=True, n_channels=3):
     """
     Plots a sample batch of data (images and masks) from a
     Tensorflow Dataset.
@@ -80,11 +80,7 @@ def plot_sample_batch(x, y_true, y_pred, softmax_output=True):
 
     x_batch = x
     y_batch = y_true
-    n_channels = 4
-
-    if softmax_output:
-        y_pred = create_mask(y_pred)
-        n_channels = 5
+    y_pred = create_mask(y_pred, n_channels)
 
     batch_size = x_batch.shape[0]
     n_cols = 2
@@ -173,17 +169,17 @@ def prepare_mask_label(label_element, img_height=256, img_width=1600, one_hot=Tr
     return mask
 
 
-def create_mask(y_pred):
+def create_mask(y_pred, n_channels):
     """
     Creats a tensor of binary masks from the unet model softmax output.
 
     Args:
-        y_pred (np.ndarray) - of shape (b, h, w, 5)
+        y_pred (np.ndarray) - of shape (b, h, w, n_channels)
 
     """
 
     pred_mask = tf.argmax(y_pred, axis=-1)
-    pred_mask = tf.one_hot(pred_mask, 5)
+    pred_mask = tf.one_hot(pred_mask, n_channels)
 
     return pred_mask.numpy()
 

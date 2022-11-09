@@ -38,7 +38,7 @@ def decoder_block(x, skip_features, n_filters):
     return x
 
 
-def unet_model(input_shape, n_channels_bottleneck=1024):
+def unet_model(input_shape, n_channels_out, n_channels_bottleneck=1024):
 
     input_shape = input_shape + (3,)
     inputs = Input(input_shape)
@@ -58,7 +58,7 @@ def unet_model(input_shape, n_channels_bottleneck=1024):
     d3 = decoder_block(d2, c2, n_channels_bottleneck / 8)
     d4 = decoder_block(d3, c1, n_channels_bottleneck / 16)
 
-    outputs = Conv2D(filters=5, kernel_size=1, padding="same", activation="softmax")(d4)
+    outputs = Conv2D(filters=n_channels_out, kernel_size=1, padding="same", activation="softmax")(d4)
 
     model = Model(inputs, outputs, name="U-Net")
 
