@@ -364,8 +364,8 @@ class SegmentationDataset:
                 img_id = img_path.split("/")[-1]
                 labels = label_dict[img_id]
                 element = (
-                    [str(x) for i, x in enumerate(labels["ClassId"]) if i != 0],
-                    [str(x) for i, x in enumerate(labels["EncodedPixels"]) if i != 0],
+                    [str(x) for i, x in enumerate(labels["ClassId"])],
+                    [str(x) for i, x in enumerate(labels["EncodedPixels"])],
                 )
                 label_elements.append(element)
 
