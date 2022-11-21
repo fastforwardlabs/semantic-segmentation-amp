@@ -6,10 +6,12 @@ import tensorflow as tf
 from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
 from imblearn.over_sampling import RandomOverSampler
+from imblearn.under_sampling import RandomUnderSampler
 
 from src.data_utils import (
     rle2mask,
     prepare_mask_label,
+    add_background_channel,
     calculate_class_weight_map_ip,
     calculate_class_weight_map_ens,
 )
@@ -42,7 +44,7 @@ class SegmentationDataset:
         img_shape,
         drop_classes=True,
         sample_weight_strategy="ens",
-        sample_weight_ens_beta=0.999,
+        sample_weight_ens_beta=0.99,
     ):
         self.test_size = test_size
         self.label_file = label_file
@@ -63,7 +65,7 @@ class SegmentationDataset:
     def _set_label_path(self):
 
         label_dir_path = os.path.join(
-            os.path.dirname(os.path.dirname(self.img_dir_path)), "mask_labels"
+            os.path.dirname(os.path.dirname(self.img_dir_path)), "mask_labels2"
         )
         os.makedirs(label_dir_path, exist_ok=True)
 
@@ -73,7 +75,7 @@ class SegmentationDataset:
         df = self._load_dataset(self.label_file, self.img_dir_path)
         df = self._normalize_df(df)
         if self.drop_classes:
-            df = self._drop_imgs_by_class(df, class_ids_to_drop=[1, 2])
+            df = self._drop_imgs_by_class(df, class_ids_to_drop=[0, 1, 2])
         return df
 
     def _load_dataset(self, label_file, img_dir_path):
@@ -99,7 +101,7 @@ class SegmentationDataset:
             {"ImageId": non_defect_imgs, "ClassId": 0, "EncodedPixels": -1}
         )
 
-        df = pd.concat([df, non_defect_imgs_df]).reset_index(drop=True)
+        # df = pd.concat([df, non_defect_imgs_df]).reset_index(drop=True)
 
         return df
 
@@ -144,9 +146,8 @@ class SegmentationDataset:
 
         """
 
-        if len(class_ids_to_drop)==0:
-            raise Exception("Must specify which classes to drop."
-            )
+        if len(class_ids_to_drop) == 0:
+            raise Exception("Must specify which classes to drop.")
 
         img_ids_to_drop = []
         for img_id, table in df.groupby("ImageId")[["ClassId", "EncodedPixels"]]:
@@ -166,6 +167,8 @@ class SegmentationDataset:
         Prepreocesses segmentation masks for each image and saves them as .png files locally for easier loading
         into tf.data pipeline.
 
+        Masks are saved with 3 channels.
+
         """
         img_ids = self.df.ImageId.unique().tolist()
         label_seq = self.get_label_sequence(img_ids, label_type="inline")
@@ -179,12 +182,11 @@ class SegmentationDataset:
                 mask_tensor = prepare_mask_label(
                     label_element, self.img_height, self.img_width
                 )
+                mask_tensor = add_background_channel(mask_tensor)
                 tf.keras.utils.save_img(
                     path=os.path.join(self.label_dir_path, f"{img_id[:-4]}.png"),
                     x=mask_tensor,
                 )
-                # file_name = os.path.join(self.label_dir_path, f"{img_id[:-4]}.npy")
-                # np.save(file_name, mask_tensor)
 
         else:
             print("Segmentation masks have already been preprocessed and saved")
@@ -274,14 +276,16 @@ class SegmentationDataset:
             return calculate_class_weight_map_ip(
                 classes=classes, imgid_to_classid_mapping=self.imgid_to_classid_mapping
             )
+        elif strategy == "NA":
+            pass
         else:
             raise Exception("Must specify valid strategy: 'ens' or 'ip'.")
 
-    def oversample_train_set(self, train_imgs):
+    def resample_train_set(self, train_imgs, over_sample=True):
         """
-        Apply naive random over-sampling to provided list of train-set image id's.
+        Apply naive resampling (under or over sampling) to provided list of train-set image id's.
 
-        This function over samples for all classes other than multiclass, then combines
+        This function under/over samples for all classes other than multiclass, then combines
         and shuffles all image_ids before returning.
 
         """
@@ -293,7 +297,11 @@ class SegmentationDataset:
             .sort_index(),
         )
 
-        ros = RandomOverSampler(random_state=42)
+        rs = (
+            RandomOverSampler(random_state=42)
+            if over_sample
+            else RandomUnderSampler(random_state=42)
+        )
 
         # remove multi-class examples from oversampling
         img_class_ids = self.imgid_to_classid_mapping[train_imgs]
@@ -302,7 +310,7 @@ class SegmentationDataset:
 
         img_ids = img_class_ids.index.to_numpy().reshape(-1, 1)
         class_ids = img_class_ids.to_numpy()
-        resampled_img_ids, resampled_class_ids = ros.fit_resample(img_ids, class_ids)
+        resampled_img_ids, resampled_class_ids = rs.fit_resample(img_ids, class_ids)
 
         # combine and shuffle multi-class samples
         resampled = pd.Series(
@@ -327,7 +335,8 @@ class SegmentationDataset:
     def get_label_sequence(self, img_ids, label_type):
         """
         Formats label annotations for each image into a sequence that can be used to create
-        a tf.data.Dataset.
+        a tf.data.Dataset. Only defect annotations are included in the sequence, meanining class 0
+        is dropped.
 
             If label_type is "inline", sequence consistes of annotations (ClassID, EncodedPixels)
             for each image.
@@ -355,8 +364,8 @@ class SegmentationDataset:
                 img_id = img_path.split("/")[-1]
                 labels = label_dict[img_id]
                 element = (
-                    [str(x) for x in labels["ClassId"]],
-                    [str(x) for x in labels["EncodedPixels"]],
+                    [str(x) for i, x in enumerate(labels["ClassId"]) if i != 0],
+                    [str(x) for i, x in enumerate(labels["EncodedPixels"]) if i != 0],
                 )
                 label_elements.append(element)
 
@@ -375,7 +384,10 @@ class SegmentationDataset:
         to create tf.data.Dataset.
 
         """
-        return [
-            self.class_weight_map[id]
-            for id in self.imgid_to_classid_mapping[img_ids].values
-        ]
+        return np.expand_dims(
+            [
+                self.class_weight_map[id]
+                for id in self.imgid_to_classid_mapping[img_ids].values
+            ],
+            axis=-1,
+        )

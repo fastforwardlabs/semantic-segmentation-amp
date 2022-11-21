@@ -27,7 +27,7 @@ def conv_block(x, n_filters):
 def encoder_block(x, n_filters):
     x = conv_block(x, n_filters)
     p = MaxPooling2D(pool_size=(2, 2))(x)
-    p = Dropout(rate=0.3)(p)
+    p = Dropout(rate=0.25)(p)
     return x, p
 
 
@@ -58,7 +58,9 @@ def unet_model(input_shape, n_channels_out, n_channels_bottleneck=1024):
     d3 = decoder_block(d2, c2, n_channels_bottleneck / 8)
     d4 = decoder_block(d3, c1, n_channels_bottleneck / 16)
 
-    outputs = Conv2D(filters=n_channels_out, kernel_size=1, padding="same", activation="softmax")(d4)
+    outputs = Conv2D(
+        filters=n_channels_out, kernel_size=1, padding="same", activation="softmax"
+    )(d4)
 
     model = Model(inputs, outputs, name="U-Net")
 

@@ -25,7 +25,8 @@ def train_model(
     train_img_path: str,
     losses: dict,
     metrics: dict,
-    resample_train_set: bool,
+    oversample_train_set: bool,
+    undersample_train_set: bool,
     sample_weight_strategy: str,
     sample_weight_ens_beta: float,
 ):
@@ -69,9 +70,12 @@ def train_model(
     test_imgs = sd.test_imgs
 
     # apply resampling train images
-    if resample_train_set:
+    if oversample_train_set:
         print("Oversampling train set.")
-        train_imgs = sd.oversample_train_set(train_imgs)
+        train_imgs = sd.resample_train_set(train_imgs, over_sample=True)
+    elif undersample_train_set:
+        print("Undersampling train set.")
+        train_imgs = sd.resample_train_set(train_imgs, over_sample=False)
 
     # get stratified sample
     if small_sample:
@@ -112,10 +116,12 @@ def train_model(
 
     if sample_weights:
         print("Weighting each sample!")
+        print(sd.class_weight_map)
         train_sample_weights = sd.get_sample_weight_sequence(train_imgs)
         train_dataset = sdp(
             X_train, y_train, is_train=True, sample_weights=train_sample_weights
         )
+        assert len(X_train) == len(y_train) == len(train_sample_weights)
     else:
         train_dataset = sdp(X_train, y_train, is_train=True)
 
@@ -123,7 +129,6 @@ def train_model(
 
     # build model
     unet = unet_model(img_shape, n_channels_out, n_channels_bottleneck)
-
     unet.compile(
         optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
         loss=losses[loss_fn],
@@ -131,7 +136,14 @@ def train_model(
     )
 
     if custom_log_dir is None:
-        log_dir = f'logs/unet-epochs_{n_epochs}-lr_{learning_rate}-channels_{n_channels_bottleneck}-loss_{loss_fn}-sw_{sample_weights}-strategy_{sample_weight_strategy}-beta_{sample_weight_ens_beta}-small_sample_{small_sample}-{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}'
+        log_dir = f'logs/unet-epochs_{n_epochs}\
+                    -lr_{learning_rate}\
+                    -channels_{n_channels_bottleneck}\
+                    -loss_{loss_fn}-sw_{sample_weights}\
+                    -strategy_{sample_weight_strategy}\
+                    -beta_{sample_weight_ens_beta}\
+                    -small_sample_{small_sample}\
+                    -{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}'
     else:
         log_dir = custom_log_dir
 
@@ -141,6 +153,13 @@ def train_model(
         ),
         tf.keras.callbacks.TensorBoard(
             log_dir=log_dir, update_freq=100, histogram_freq=1, write_images=True
+        ),
+        tf.keras.callbacks.EarlyStopping(
+            monitor="dice_coef",
+            patience=25,
+            verbose=1,
+            mode="max",
+            restore_best_weights=True,
         ),
     ]
 
@@ -152,3 +171,4 @@ def train_model(
     )
 
     return hist, test_dataset
+    # return unet, callbacks

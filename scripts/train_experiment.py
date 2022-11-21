@@ -24,48 +24,89 @@ RUNTIME_ID = py39_gpu_runtimes.runtimes[0].image_identifier
 
 
 # configure experiments
-N_EPOCHS = 75
+N_EPOCHS = 50
 LEARNING_RATE = 0.01
-N_CHANNELS_BOTTLENECK = 512
-LOSS_FN = "tversky_loss_axis"
+N_CHANNELS_BOTTLENECK = 352
 
 experiments = [
     {
-        "sample_weight_strategy": "ens",
-        "sample_weight_ens_beta": 0.99,
+        "alias": "baseline",
+        "loss_fn": "categorical_crossentropy",
         "sample_weights": False,
+        "sample_weight_strategy": "NA",
+        "undersample_train_set": False,
+        "oversample_train_set": False,
     },
     {
+        "alias": "undersample",
+        "loss_fn": "categorical_crossentropy",
+        "sample_weights": False,
+        "sample_weight_strategy": "NA",
+        "undersample_train_set": True,
+        "oversample_train_set": False,
+    },
+    {
+        "alias": "oversample",
+        "loss_fn": "categorical_crossentropy",
+        "sample_weights": False,
+        "sample_weight_strategy": "NA",
+        "undersample_train_set": False,
+        "oversample_train_set": True,
+    },
+    {
+        "alias": "sample_weighting_ip",
+        "loss_fn": "categorical_crossentropy",
+        "sample_weights": True,
+        "sample_weight_strategy": "ip",
+        "undersample_train_set": False,
+        "oversample_train_set": False,
+    },
+    {
+        "alias": "sample_weighting_ens_0.99",
+        "loss_fn": "categorical_crossentropy",
+        "sample_weights": True,
         "sample_weight_strategy": "ens",
         "sample_weight_ens_beta": 0.99,
-        "sample_weights": True,
+        "undersample_train_set": False,
+        "oversample_train_set": False,
     },
     {
+        "alias": "sample_weighting_ens_0.999",
+        "loss_fn": "categorical_crossentropy",
+        "sample_weights": True,
         "sample_weight_strategy": "ens",
         "sample_weight_ens_beta": 0.999,
-        "sample_weights": True,
+        "undersample_train_set": False,
+        "oversample_train_set": False,
     },
     {
+        "alias": "sample_weighting_ens_0.9999",
+        "loss_fn": "categorical_crossentropy",
+        "sample_weights": True,
         "sample_weight_strategy": "ens",
         "sample_weight_ens_beta": 0.9999,
-        "sample_weights": True,
-    },
-    {
-        "sample_weight_strategy": "ip",
-        "sample_weight_ens_beta": 0,
-        "sample_weights": True,
+        "undersample_train_set": False,
+        "oversample_train_set": False,
     },
 ]
 
 
 for i, experiment in enumerate(experiments):
 
-    ARGS = f"--n_epochs {N_EPOCHS} --lr {LEARNING_RATE} --n_channels {N_CHANNELS_BOTTLENECK} --loss_fn {LOSS_FN} --sample_weight_strategy {experiment['sample_weight_strategy']} --sample_weight_ens_beta {experiment['sample_weight_ens_beta']} --small_sample {'--sample_weights' if experiment['sample_weights'] else ''}"
+    ARGS = f"--n_epochs {N_EPOCHS} \
+            --lr {LEARNING_RATE} \
+            --n_channels {N_CHANNELS_BOTTLENECK} \
+            --loss_fn {experiment['loss_fn']} \
+            {'--sample_weights' if experiment['sample_weights'] else ''} \
+            {'--sample_weight_strategy '+experiment['sample_weight_strategy'] if experiment['sample_weights'] else ''} \
+            {'--sample_weight_ens_beta '+str(experiment['sample_weight_ens_beta']) if (experiment['sample_weights']) & (experiment['sample_weight_strategy']=='ens') else ''} \
+            {'--oversample_train_set' if experiment['oversample_train_set'] else ''} \
+            {'--undersample_train_set' if experiment['undersample_train_set'] else ''}"
 
     # create job
     job_body = cmlapi.CreateJobRequest(
         project_id=PROJECT_ID,
-        name=f"Sample Weights Experiment {i}",
+        name=f"Imbalanced Data Experiment - {experiment['alias'].upper()}",
         script="scripts/run_train.py",
         runtime_identifier=RUNTIME_ID,
         cpu=4.0,

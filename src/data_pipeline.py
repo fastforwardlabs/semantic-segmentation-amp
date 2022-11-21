@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 
-from src.data_utils import rle2mask, prepare_mask_label
+from src.data_utils import rle2mask, prepare_mask_label, add_background_channel
 
 
 class SegmentationDataPipeline:
@@ -47,14 +47,15 @@ class SegmentationDataPipeline:
 
         if self.label_type == "inline":
             label_ds = (
-                tf.data.Dataset.from_tensor_slices(label_seq).map(
+                tf.data.Dataset.from_tensor_slices(label_seq)
+                .map(
                     self.tf_prepare_mask_label,
                     num_parallel_calls=self.pipeline_options["map_parallel"],
                 )
-                # .map(
-                #     self.tf_add_background_channel,
-                #     num_parallel_calls=self.pipeline_options["map_parallel"],
-                # )
+                .map(
+                    self.tf_add_background_channel,
+                    num_parallel_calls=self.pipeline_options["map_parallel"],
+                )
                 .map(
                     self.normalize,
                     num_parallel_calls=self.pipeline_options["map_parallel"],
@@ -144,33 +145,10 @@ class SegmentationDataPipeline:
 
         return mask[0]
 
-    def add_background_channel(self, mask, max_value=255.0):
-        """
-        Prepends an additional channel to a mask label.
-
-        The additional channel assumes a value of `max_value` for each
-        pixel location that doesn't have a `max_value` in any of the existing
-        channels.
-
-        """
-
-        missing_pixels = np.sum(mask, axis=-1)
-
-        where_0 = np.where(missing_pixels == 0.0)
-        where_1 = np.where(missing_pixels == max_value)
-
-        missing_pixels[where_0] = max_value
-        missing_pixels[where_1] = 0.0
-
-        missing_pixels = np.expand_dims(missing_pixels, axis=-1)
-        mask = np.concatenate((missing_pixels, mask), axis=-1)
-
-        return mask
-
     def tf_add_background_channel(self, mask):
 
         mask = tf.py_function(
-            func=self.add_background_channel,
+            func=add_background_channel,
             inp=[mask],
             Tout=[tf.float32],
         )

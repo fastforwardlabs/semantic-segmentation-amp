@@ -1,57 +1,27 @@
 import os
 import json
-import datetime
 import argparse
 import shutil
+import tensorflow as tf
 
-from src.train2 import train_model
+from src.train import train_model
 from src.model_utils import (
-    tversky,
-    tversky_loss,
-    tversky_axis,
-    # tversky_loss_axis,
-    TverskyLossAxis,
+    dice_coef,
+    evaluate_per_class,
+    dice_coef_per_class,
 )
-
-
-from keras import backend as K
-from keras.losses import binary_crossentropy
-
-
-def dice_coef(y_true, y_pred, smooth=1):
-    y_true_f = K.flatten(y_true)
-    y_pred_f = K.flatten(y_pred)
-    intersection = K.sum(y_true_f * y_pred_f)
-    return (2.0 * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
-
-
-def dice_loss(y_true, y_pred):
-    smooth = 1.0
-    y_true_f = K.flatten(y_true)
-    y_pred_f = K.flatten(y_pred)
-    intersection = y_true_f * y_pred_f
-    score = (2.0 * K.sum(intersection) + smooth) / (
-        K.sum(y_true_f) + K.sum(y_pred_f) + smooth
-    )
-    return 1.0 - score
-
-
-def bce_dice_loss(y_true, y_pred):
-    return binary_crossentropy(y_true, y_pred) + dice_loss(y_true, y_pred)
 
 
 IMG_SHAPE = (256, 1600)
 BATCH_SIZE = 8
 TEST_SIZE = 0.1
+N_CHANNELS_OUT = 3
 ANNOTATIONS_PATH = "data/train.csv"
 TRAIN_IMG_PATH = "data/train_images/"
 LOSSES = {
-    "tversky_loss": tversky_loss,
-    # "tversky_loss_axis": tversky_loss_axis,
-    "tversky_loss_axis": TverskyLossAxis(),
-    "bce_dice_loss": bce_dice_loss,
+    "categorical_crossentropy": tf.keras.losses.CategoricalCrossentropy(),
 }
-METRICS = {"tversky": tversky, "tversky_axis": tversky_axis, "dice_coef": dice_coef}
+METRICS = {"dice_coef": dice_coef}
 
 
 if __name__ == "__main__":
@@ -81,7 +51,8 @@ if __name__ == "__main__":
         type=str,
         default="dice_loss",
         choices=[
-            "bce_dice_loss",
+            "categorical_crossentropy",
+            "dice_loss",
             "tversky_loss",
             "tversky_loss_axis",
         ],
@@ -99,8 +70,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--sample_weight_strategy",
         type=str,
-        default="ens",
+        default="NA",
         choices=[
+            "NA",
             "ens",
             "ip",
         ],
@@ -112,18 +84,25 @@ if __name__ == "__main__":
         help="Hyperparam for ENS sample weighting.",
     )
     parser.add_argument(
-        "--resample_train_set",
+        "--oversample_train_set",
         action="store_true",
-        help="Whether apply resampling to training set as means to balance classes",
+        help="Whether apply oversampling to training set as means to balance classes",
+    )
+    parser.add_argument(
+        "--undersample_train_set",
+        action="store_true",
+        help="Whether apply undersampling to training set as means to balance classes",
     )
 
     args = parser.parse_args()
-    log_dir = f'logs_sigmoid_experiment/unet-epochs_{args.n_epochs}-lr_{args.lr}-channels_{args.n_channels}-loss_{args.loss_fn}-sw_{args.sample_weights}-strategy_{args.sample_weight_strategy if args.sample_weights else "NA"}-beta_{args.sample_weight_ens_beta if args.sample_weights else "NA"}-small_sample_{args.small_sample}-resample_train_set_{args.resample_train_set}-{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}'
+
+    log_dir = f'logs/unet-epochs_{args.n_epochs}-lr_{args.lr}-channels_{args.n_channels}-loss_{args.loss_fn}-small_sample_{args.small_sample}{"-sw_"+str(args.sample_weights) if args.sample_weights else ""}{"-strategy_"+(args.sample_weight_strategy) if args.sample_weights else ""}{"-beta_"+str(args.sample_weight_ens_beta) if args.sample_weights else ""}{"-oversample_train_set_"+str(args.oversample_train_set) if args.oversample_train_set else ""}{"-undersample_train_set_"+str(args.undersample_train_set) if args.undersample_train_set else ""}'
 
     kwargs = {
         "n_epochs": args.n_epochs,
         "learning_rate": args.lr,
         "n_channels_bottleneck": args.n_channels,
+        "n_channels_out": N_CHANNELS_OUT,
         "loss_fn": args.loss_fn,
         "sample_weights": args.sample_weights,
         "custom_log_dir": log_dir,
@@ -135,13 +114,14 @@ if __name__ == "__main__":
         "train_img_path": TRAIN_IMG_PATH,
         "losses": LOSSES,
         "metrics": METRICS,
-        "resample_train_set": args.resample_train_set,
+        "oversample_train_set": args.oversample_train_set,
+        "undersample_train_set": args.undersample_train_set,
         "sample_weight_strategy": args.sample_weight_strategy,
         "sample_weight_ens_beta": args.sample_weight_ens_beta,
     }
     print(kwargs)
 
-    hist = train_model(**kwargs)
+    hist, test_dataset = train_model(**kwargs)
 
     # save out training metrics
     with open(os.path.join(log_dir, "model_history.json"), "w") as f:
@@ -152,3 +132,13 @@ if __name__ == "__main__":
     model_architecture_path = "src/model.py"
     shutil.copyfile(train_script_path, os.path.join(log_dir, "run_train.py"))
     shutil.copyfile(model_architecture_path, os.path.join(log_dir, "model.py"))
+
+    # evaluate per class score on test set
+    MODEL_PATH = os.path.join(log_dir, "best_model.h5")
+    unet_model = tf.keras.models.load_model(
+        MODEL_PATH, custom_objects=(LOSSES | METRICS)
+    )
+    dice_per_class = evaluate_per_class(test_dataset, unet_model, dice_coef_per_class)
+
+    with open(os.path.join(log_dir, "avg_dice_coeff_per_class.json"), "w") as f:
+        json.dump(dice_per_class, f)

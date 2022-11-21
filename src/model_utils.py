@@ -170,6 +170,7 @@ def evaluate_per_class(dataset: tf.data.Dataset, model, metric) -> Dict:
             class_scores[k].append(v)
 
     return {k: float(np.mean(v)) for k, v in class_scores.items()}
+    # return class_scores
 
 
 def tversky_per_class(y_true, y_pred, smooth=1e-6):

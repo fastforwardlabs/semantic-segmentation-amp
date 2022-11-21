@@ -123,6 +123,52 @@ def plot_sample_batch(x, y_true, y_pred, softmax_output=True, n_channels=3):
     plt.show()
 
 
+def plot_samples_by_class(
+    class_idx, dataset, pipeline, model, n_batches, test_set=True, return_samples=False
+):
+    """
+    Plot a batch of samples of particular class type.
+
+    Args:
+        class_idx (int)
+        dataset (src.dataset.SegmentationDataset)
+        model (keras.engine.functional.Functional)
+        n_batches (int)
+        test_set (bool)
+        return_samples (bool)
+
+    Returns:
+        samples (List[Tuple[np.ndarray, np.ndarray]])
+
+    """
+
+    set_filter = dataset.test_imgs if test_set else dataset.train_imgs
+
+    class_imgs = dataset.imgid_to_classid_mapping[set_filter][
+        dataset.imgid_to_classid_mapping == class_idx
+    ].index.tolist()
+
+    X = dataset.get_image_sequence(class_imgs)
+    y = dataset.get_label_sequence(class_imgs, label_type="preprocessed")
+
+    ds = pipeline(X, y, is_train=False)
+
+    samples = list(ds.take(n_batches).as_numpy_iterator())
+
+    outputs = []
+
+    for batch in samples:
+        x = batch[0]
+        y_true = batch[1]
+        y_pred = model.predict(x)
+
+        outputs.append((x, y_true, y_pred))
+        plot_sample_batch(x=x, y_true=y_true, y_pred=y_pred)
+
+    if return_samples:
+        return outputs
+
+
 def prepare_mask_label(label_element, img_height=256, img_width=1600, one_hot=True):
     """
     Prepares image annotation labels as matrix of binary mask channels.
@@ -151,7 +197,6 @@ def prepare_mask_label(label_element, img_height=256, img_width=1600, one_hot=Tr
         except AttributeError:
             rle = label_element[1][i]
 
-
         if rle != "-1":
             class_mask = rle2mask(
                 rle,
@@ -165,6 +210,30 @@ def prepare_mask_label(label_element, img_height=256, img_width=1600, one_hot=Tr
     if not one_hot:
         mask = np.concatenate([np.zeros((img_height, img_width, 1)), mask], axis=-1)
         mask = np.argmax(mask, axis=-1, keepdims=True)
+
+    return mask
+
+
+def add_background_channel(mask, max_value=1):
+    """
+    Prepends an additional channel to a mask label.
+
+    The additional channel assumes a value of `max_value` for each
+    pixel location that doesn't have a `max_value` in any of the existing
+    channels.
+
+    """
+
+    missing_pixels = np.sum(mask, axis=-1)
+
+    where_0 = np.where(missing_pixels == 0.0)
+    where_1 = np.where(missing_pixels == max_value)
+
+    missing_pixels[where_0] = max_value
+    missing_pixels[where_1] = 0.0
+
+    missing_pixels = np.expand_dims(missing_pixels, axis=-1)
+    mask = np.concatenate((missing_pixels, mask), axis=-1)
 
     return mask
 
