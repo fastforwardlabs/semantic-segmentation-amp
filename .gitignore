@@ -148,6 +148,7 @@ logs_old/
 logs_exp_vallossmin/
 logs_sigmoid_experiment/
 logs_sw_experiment/
+apps/tmp/
 .vscode-server
 .keras
 .nv
