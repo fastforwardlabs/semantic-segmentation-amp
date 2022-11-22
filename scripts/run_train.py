@@ -11,7 +11,7 @@ from src.model_utils import (
     dice_coef_per_class,
 )
 
-
+# IMA COMMENT
 IMG_SHAPE = (256, 1600)
 BATCH_SIZE = 8
 TEST_SIZE = 0.1
