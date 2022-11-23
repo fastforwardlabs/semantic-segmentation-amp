@@ -119,19 +119,19 @@ if st.session_state["show_masks"]:
         save_mask_overlay_image(x, y_true, type="true")
         save_mask_overlay_image(x, y_pred, type="pred")
 
-        st.write("**Ground Truth Mask**")
-        st.image(
-            "apps/tmp/true/overlay.png",
-            clamp=True,
-            caption=f"Ground Truth Overlay",
-            use_column_width=True,
-        )
-
         st.write("**Predicted Mask**")
         st.image(
             "apps/tmp/pred/overlay.png",
             clamp=True,
             caption=f"Predicted Overlay",
+            use_column_width=True,
+        )
+
+        st.write("**Ground Truth Mask**")
+        st.image(
+            "apps/tmp/true/overlay.png",
+            clamp=True,
+            caption=f"Ground Truth Overlay",
             use_column_width=True,
         )
 
@@ -142,44 +142,11 @@ if st.session_state["show_masks"]:
         sbs_col1, sbs_col2 = st.columns(2)
 
         with sbs_col1:
-            st.write("**Ground Truth Mask**")
-            st.image(
-                x,
-                clamp=True,
-                caption=f"Model Input",
-                use_column_width=True,
-            )
-            st.image(
-                "apps/tmp/true/channel_0.png",
-                clamp=True,
-                caption=f"Background Channel",
-                use_column_width=True,
-            )
-            st.image(
-                "apps/tmp/true/channel_1.png",
-                clamp=True,
-                caption=f"Scratches Channel",
-                use_column_width=True,
-            )
-            st.image(
-                "apps/tmp/true/channel_2.png",
-                clamp=True,
-                caption=f"Patches Channel",
-                use_column_width=True,
-            )
-
-        with sbs_col2:
             st.write("**Predicted Mask**")
             st.image(
                 x,
                 clamp=True,
                 caption=f"Model Input",
-                use_column_width=True,
-            )
-            st.image(
-                "apps/tmp/pred/channel_0.png",
-                clamp=True,
-                caption=f"Background Channel",
                 use_column_width=True,
             )
             st.image(
@@ -190,6 +157,27 @@ if st.session_state["show_masks"]:
             )
             st.image(
                 "apps/tmp/pred/channel_2.png",
+                clamp=True,
+                caption=f"Patches Channel",
+                use_column_width=True,
+            )
+
+        with sbs_col2:
+            st.write("**Ground Truth Mask**")
+            st.image(
+                x,
+                clamp=True,
+                caption=f"Model Input",
+                use_column_width=True,
+            )
+            st.image(
+                "apps/tmp/true/channel_1.png",
+                clamp=True,
+                caption=f"Scratches Channel",
+                use_column_width=True,
+            )
+            st.image(
+                "apps/tmp/true/channel_2.png",
                 clamp=True,
                 caption=f"Patches Channel",
                 use_column_width=True,
