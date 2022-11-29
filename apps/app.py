@@ -18,7 +18,7 @@ from apps.app_utils import (
 # ------------------------- PAGE SETUP -------------------------
 ffl_favicon = plt.imread("images/cldr-favicon.ico")
 st.set_page_config(
-    page_title="Severstal Steel Defect Detection",
+    page_title="Manufacturing Defect Detection",
     page_icon=ffl_favicon,
     layout="wide",
 )
@@ -49,10 +49,10 @@ if "current_x" not in st.session_state.keys():
     show_masks()  # this only gets run here because we're intializing
 
 
-st.title(":mag: Severstal Steel Defect Detection")
+st.title(":mag: Manufacturing Defect Detection")
 st.write(
-    "This application is intended to help visualize the quality of segmentation mask predictions on the _Severstal Steel \
-        Defect Detection_ dataset. Analyzing various defects helps build intuition around a given models strengths and shortcomings."
+    "This application is intended to help visualize the quality of segmentation mask predictions on the manufacturing \
+    dataset of steel image samples. Analyzing various defects helps build intuition around a given models strengths and shortcomings."
 )
 st.write(
     "To get started, select the defect type you'd like to visualize. Then, click 'Predict Segmentation Masks' to generate mask predictions.\
@@ -119,19 +119,19 @@ if st.session_state["show_masks"]:
         save_mask_overlay_image(x, y_true, type="true")
         save_mask_overlay_image(x, y_pred, type="pred")
 
-        st.write("**Ground Truth Mask**")
-        st.image(
-            "apps/tmp/true/overlay.png",
-            clamp=True,
-            caption=f"Ground Truth Overlay",
-            use_column_width=True,
-        )
-
         st.write("**Predicted Mask**")
         st.image(
             "apps/tmp/pred/overlay.png",
             clamp=True,
             caption=f"Predicted Overlay",
+            use_column_width=True,
+        )
+
+        st.write("**Ground Truth Mask**")
+        st.image(
+            "apps/tmp/true/overlay.png",
+            clamp=True,
+            caption=f"Ground Truth Overlay",
             use_column_width=True,
         )
 
@@ -142,44 +142,11 @@ if st.session_state["show_masks"]:
         sbs_col1, sbs_col2 = st.columns(2)
 
         with sbs_col1:
-            st.write("**Ground Truth Mask**")
-            st.image(
-                x,
-                clamp=True,
-                caption=f"Model Input",
-                use_column_width=True,
-            )
-            st.image(
-                "apps/tmp/true/channel_0.png",
-                clamp=True,
-                caption=f"Background Channel",
-                use_column_width=True,
-            )
-            st.image(
-                "apps/tmp/true/channel_1.png",
-                clamp=True,
-                caption=f"Scratches Channel",
-                use_column_width=True,
-            )
-            st.image(
-                "apps/tmp/true/channel_2.png",
-                clamp=True,
-                caption=f"Patches Channel",
-                use_column_width=True,
-            )
-
-        with sbs_col2:
             st.write("**Predicted Mask**")
             st.image(
                 x,
                 clamp=True,
                 caption=f"Model Input",
-                use_column_width=True,
-            )
-            st.image(
-                "apps/tmp/pred/channel_0.png",
-                clamp=True,
-                caption=f"Background Channel",
                 use_column_width=True,
             )
             st.image(
@@ -190,6 +157,27 @@ if st.session_state["show_masks"]:
             )
             st.image(
                 "apps/tmp/pred/channel_2.png",
+                clamp=True,
+                caption=f"Patches Channel",
+                use_column_width=True,
+            )
+
+        with sbs_col2:
+            st.write("**Ground Truth Mask**")
+            st.image(
+                x,
+                clamp=True,
+                caption=f"Model Input",
+                use_column_width=True,
+            )
+            st.image(
+                "apps/tmp/true/channel_1.png",
+                clamp=True,
+                caption=f"Scratches Channel",
+                use_column_width=True,
+            )
+            st.image(
+                "apps/tmp/true/channel_2.png",
                 clamp=True,
                 caption=f"Patches Channel",
                 use_column_width=True,
