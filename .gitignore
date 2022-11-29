@@ -140,14 +140,7 @@ dmypy.json
 
 # Project
 data/
-logs/
-logs2/
-logs2_old/
-logs3/
-logs_old/
-logs_exp_vallossmin/
-logs_sigmoid_experiment/
-logs_sw_experiment/
+logs_old
 apps/tmp/
 .vscode-server
 .keras
