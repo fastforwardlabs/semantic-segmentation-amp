@@ -81,14 +81,14 @@ def train_model(
     if small_sample:
         _, train_imgs = train_test_split(
             sd.imgid_to_classid_mapping[train_imgs],
-            test_size=0.25,
+            test_size=0.1,
             random_state=42,
             shuffle=True,
             stratify=sd.imgid_to_classid_mapping[train_imgs],
         )
         _, test_imgs = train_test_split(
             sd.imgid_to_classid_mapping[test_imgs],
-            test_size=0.25,
+            test_size=0.1,
             random_state=42,
             shuffle=True,
             stratify=sd.imgid_to_classid_mapping[test_imgs],
@@ -108,7 +108,7 @@ def train_model(
         pipeline_options={
             "map_parallel": None,  # off if None
             "cache": False,
-            "shuffle_buffer_size": 50,  # off if False
+            "shuffle_buffer_size": 25,  # off if False
             "batch_size": batch_size,
             "prefetch": False,  # off if False
         },
@@ -147,20 +147,58 @@ def train_model(
     else:
         log_dir = custom_log_dir
 
+    def lr_scheduler(epoch, lr, n_epochs=n_epochs):
+        """
+        Function for the schedule of learning rate.
+
+        Schedule uses provided learning rate for first half of n_epochs, then
+        exponentially decays for remainder of n_epochs.
+
+        Args:
+            epoch (int) - current epoch
+            lr (float) - learning rate
+            n_epochs (int) - total number of epochs
+
+        Returns:
+            learning rate
+        """
+        if epoch < (n_epochs / 2):
+            return float(lr)
+        else:
+            return float(lr * tf.math.exp(-0.1))
+
     callbacks = [
         tf.keras.callbacks.ModelCheckpoint(
-            os.path.join(log_dir, "best_model.h5"), save_best_only=True
+            filepath=os.path.join(
+                log_dir,
+                "min_val_loss",
+                "{epoch:02d}-{val_loss:.2f}-{val_dice_coef:.2f}-best_model.h5",
+            ),
+            save_best_only=True,
+            monitor="val_loss",
+            mode="min",
+        ),
+        tf.keras.callbacks.ModelCheckpoint(
+            filepath=os.path.join(
+                log_dir,
+                "max_val_dice",
+                "{epoch:02d}-{val_loss:.2f}-{val_dice_coef:.2f}-best_model.h5",
+            ),
+            save_best_only=True,
+            monitor="val_dice_coef",
+            mode="max",
         ),
         tf.keras.callbacks.TensorBoard(
             log_dir=log_dir, update_freq=100, histogram_freq=1, write_images=True
         ),
-        tf.keras.callbacks.EarlyStopping(
-            monitor="dice_coef",
-            patience=25,
-            verbose=1,
-            mode="max",
-            restore_best_weights=True,
-        ),
+        tf.keras.callbacks.LearningRateScheduler(lr_scheduler, verbose=1)
+        # tf.keras.callbacks.EarlyStopping(
+        #     monitor="dice_coef",
+        #     patience=25,
+        #     verbose=1,
+        #     mode="max",
+        #     restore_best_weights=True,
+        # ),
     ]
 
     hist = unet.fit(
