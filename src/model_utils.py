@@ -1,8 +1,11 @@
+import os
+import json
 from collections import defaultdict
 from typing import Optional, Dict, List
 
 from tqdm import tqdm
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 
 # METRICS & LOSSES
@@ -245,6 +248,47 @@ def dice_coef_per_class(y_true, y_pred, smooth=1e-6):
         metrics[class_idx] = score.numpy()
 
     return metrics
+
+
+def collect_experiment_scores(log_dir):
+    """
+    Gather validation dice_coefficient score and loss for each training
+    experiment in the provided log_dir, format as a pd.DataFrame, and return.
+
+    For details on training experiments, see `/scripts/train_experiment.py`.
+
+    Args:
+        log_dir (str)
+
+    Returns:
+        pd.DataFrame
+
+    """
+
+    val_dice_score, val_loss = [], []
+    experiments = os.listdir(log_dir)
+
+    for exp in experiments:
+
+        # gather training history
+        with open(os.path.join(log_dir, exp, "model_history.json"), "r") as f:
+            hist = json.load(f)
+
+        # determine best dice score
+        best_dice_epoch = np.argmax(hist["val_dice_coef"])
+        best_dice = hist["val_dice_coef"][best_dice_epoch]
+
+        # determine best loss
+        best_loss_epoch = np.argmin(hist["val_loss"])
+        best_loss = hist["val_loss"][best_loss_epoch]
+
+        val_dice_score.append(best_dice)
+        val_loss.append(best_loss)
+
+    return pd.DataFrame(
+        zip(experiments, val_dice_score, val_loss),
+        columns=["experiment", "val_dice_score", "val_loss"],
+    )
 
 
 # OLD METRICS & LOSSES (to be deleted)
