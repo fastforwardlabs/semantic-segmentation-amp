@@ -65,7 +65,7 @@ class SegmentationDataset:
     def _set_label_path(self):
 
         label_dir_path = os.path.join(
-            os.path.dirname(os.path.dirname(self.img_dir_path)), "mask_labels2"
+            os.path.dirname(os.path.dirname(self.img_dir_path)), "mask_labels"
         )
         os.makedirs(label_dir_path, exist_ok=True)
 
