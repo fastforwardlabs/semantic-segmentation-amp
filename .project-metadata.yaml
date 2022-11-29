@@ -1,0 +1,33 @@
+name: Detecting Defects with Semantic Segmentation
+description: >-
+  A demonstration of how semantic segmentation can be used to detect defects in manufacturing images. 
+author: Cloudera Inc.
+specification_version: 1.0
+prototype_version: 2.0
+date: "2022-11-29"
+
+environment_variables:
+  KAGGLE_USERNAME:
+    default: ""
+    description: "Optional Kaggle account username"
+  KAGGLE_KEY:
+    default: ""
+    description: "Optional Kaggle account API token associated with username provided above"
+
+runtimes:
+  - editor: Workbench
+    kernel: Python 3.9
+    edition: Standard
+
+tasks:
+  - type: run_session
+    name: Install Dependencies
+    script: scripts/install_dependencies.py
+    cpu: 2
+    memory: 4
+
+  - type: run_session
+    name: Prepare Data
+    script: scripts/prepare_data.py
+    cpu: 2
+    memory: 4
