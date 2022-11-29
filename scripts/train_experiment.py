@@ -24,7 +24,7 @@ RUNTIME_ID = py39_gpu_runtimes.runtimes[0].image_identifier
 
 
 # configure experiments
-N_EPOCHS = 50
+N_EPOCHS = 200
 LEARNING_RATE = 0.01
 N_CHANNELS_BOTTLENECK = 352
 
