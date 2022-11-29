@@ -11,7 +11,7 @@ from src.model_utils import (
     dice_coef_per_class,
 )
 
-# IMA COMMENT
+
 IMG_SHAPE = (256, 1600)
 BATCH_SIZE = 8
 TEST_SIZE = 0.1
@@ -122,6 +122,7 @@ if __name__ == "__main__":
     print(kwargs)
 
     hist, test_dataset = train_model(**kwargs)
+    hist.history["lr"] = [float(val) for val in hist.history["lr"]]
 
     # save out training metrics
     with open(os.path.join(log_dir, "model_history.json"), "w") as f:
@@ -134,7 +135,9 @@ if __name__ == "__main__":
     shutil.copyfile(model_architecture_path, os.path.join(log_dir, "model.py"))
 
     # evaluate per class score on test set
-    MODEL_PATH = os.path.join(log_dir, "best_model.h5")
+    model_dir = os.path.join(log_dir, "max_val_dice")
+    model_name = os.listdir(model_dir)[-1]
+    MODEL_PATH = os.path.join(model_dir, model_name)
     unet_model = tf.keras.models.load_model(
         MODEL_PATH, custom_objects=(LOSSES | METRICS)
     )
