@@ -22,8 +22,9 @@ if res == 0 and os.path.exists(os.path.join(BASE_PATH, "data/train.csv")):
 else:
     os.environ["DATASET_DIR"] = os.path.join(BASE_PATH, os.environ["DATASET_DIR"])
     os.system(
-        f"tar -xvf /home/cdsw/sample_data.tar.gz --directory {os.environ['DATASET_DIR']}"
+        f"tar -xvf /home/cdsw/sample_data.tar.gz && mv /home/cdsw/sample_data {os.environ['DATASET_DIR']}"
     )
+
     print("Could not download data from Kaggle, using sample data instead.")
     print("Response: ", res)
 
