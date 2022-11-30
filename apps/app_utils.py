@@ -7,17 +7,11 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
-from src.model import unet_model
 from src.dataset import SegmentationDataset
 from src.data_pipeline import SegmentationDataPipeline
 from src.data_utils import create_mask
 from src.model_utils import (
     dice_coef,
-    dice_loss,
-    tversky,
-    tversky_loss,
-    tversky_axis,
-    TverskyLossAxis,
 )
 
 BATCH_SIZE = 1
@@ -26,12 +20,10 @@ ANNOTATIONS_PATH = os.path.join(os.environ["DATASET_DIR"], "train.csv")
 TRAIN_IMG_PATH = os.path.join(os.environ["DATASET_DIR"], "train_images")
 MODEL_PATH = "model/best_model.h5"
 LOSSES = {
-    "dice_loss": dice_loss,
-    "tversky_loss": tversky_loss,
-    "tversky_loss_axis": TverskyLossAxis(),
+    "categorical_crossentropy": tf.keras.losses.CategoricalCrossentropy(),
 }
-METRICS = {"dice_coef": dice_coef, "tversky": tversky, "tversky_axis": tversky_axis}
-CLASS_MAP = {"Scratches": 3, "Patches": 4, "Both": -2}
+METRICS = {"dice_coef": dice_coef}
+CLASS_MAP = {"Scratches": 3, "Patches": 4, "Scratches & Patches": -2}
 USE_TEST_SET = True if os.getenv("DATASET_DIR") == "/home/cdsw/data" else False
 
 
@@ -136,7 +128,7 @@ def prepare_visual_assets(x, y, pipeline, model):
     return x, y_true, y_pred
 
 
-def show_masks():
+def toggle_show_masks():
 
     # toggle show masks
     st.session_state["show_masks"] = not st.session_state["show_masks"]
@@ -147,11 +139,19 @@ def increment_index_tracker(defect_type):
     Utility to keep track of the current index for each of the defect classes
     as the user cylces through them.
 
-    Provided a defect_type, this function returns the index of the next example
+    Provided a defect_type, this function sets the index of the next example
     for that given defect_type and updates the session state counter.
+
+    If we've reached the last sample in the class, restart at the beginning
     """
 
-    st.session_state["class_index_tracker"][CLASS_MAP[defect_type]] += 1
+    current_idx = st.session_state["class_index_tracker"][CLASS_MAP[defect_type]]
+    num_samples = len(st.session_state["samples_dict"][3][0])
+
+    if current_idx == (num_samples - 1):
+        st.session_state["class_index_tracker"][CLASS_MAP[defect_type]] = 0
+    else:
+        st.session_state["class_index_tracker"][CLASS_MAP[defect_type]] += 1
 
 
 def get_next_example():
@@ -183,7 +183,9 @@ def get_next_example():
     st.session_state["current_y"] = next_y
 
     # toggle show masks
-    st.session_state["show_masks"] = not st.session_state["show_masks"]
+    if st.session_state["show_masks"]:
+        toggle_show_masks()
+    # st.session_state["show_masks"] = not st.session_state["show_masks"]
 
 
 def save_channel_imgs(y, type="pred"):
