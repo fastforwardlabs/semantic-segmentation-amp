@@ -39,7 +39,7 @@ tasks:
     short_summary: Starting tensorboard
     name: Tensorboard Training Logs
     subdomain: tensorboard
-    script: CML/launch_tensorboard.py
+    script: cml/launch_tensorboard.py
     environment_variables:
       TASK_TYPE: START_APPLICATION
     cpu: 1
@@ -49,7 +49,7 @@ tasks:
     short_summary: Starting streamlit application
     name: Manufacturing Defect Detection
     subdomain: streamlit
-    script: CML/launch_app.py
+    script: cml/launch_app.py
     environment_variables:
       TASK_TYPE: START_APPLICATION
     cpu: 2

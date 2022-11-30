@@ -1,3 +1,4 @@
+import os
 from collections import defaultdict
 
 import numpy as np
@@ -21,8 +22,8 @@ from src.model_utils import (
 
 BATCH_SIZE = 1
 IMG_SHAPE = (256, 1600)
-ANNOTATIONS_PATH = "data/train.csv"
-TRAIN_IMG_PATH = "data/train_images/"
+ANNOTATIONS_PATH = os.path.join(os.environ["DATASET_DIR"], "train.csv")
+TRAIN_IMG_PATH = os.path.join(os.environ["DATASET_DIR"], "train_images")
 MODEL_PATH = "model/best_model.h5"
 LOSSES = {
     "dice_loss": dice_loss,
@@ -31,6 +32,7 @@ LOSSES = {
 }
 METRICS = {"dice_coef": dice_coef, "tversky": tversky, "tversky_axis": tversky_axis}
 CLASS_MAP = {"Scratches": 3, "Patches": 4, "Both": -2}
+USE_TEST_SET = True if os.getenv("DATASET_DIR") == "/home/cdsw/data" else False
 
 
 @st.cache
@@ -112,7 +114,10 @@ def build_samples_queue(dataset, n_samples=100):
 
     for class_idx in CLASS_MAP.values():
         x, y = get_samples_by_class(
-            class_idx=class_idx, dataset=dataset, n_samples=n_samples
+            class_idx=class_idx,
+            dataset=dataset,
+            n_samples=n_samples,
+            test_set=USE_TEST_SET,
         )
         samples_dict[class_idx] = x, y
 

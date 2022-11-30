@@ -16,6 +16,7 @@ def prepare_data():
         2. If not, use local sample. Set environment variable accordingly
         3. Save out preprocessed segmentation mask labels for the dataset examples
         4. Copy a trained model from ~/logs to ~/model directory to be used by Streamlit app
+        5. Create temp directory in support of Streamlit app UI
 
     """
 
@@ -74,6 +75,10 @@ def prepare_data():
     NEW_MODEL_PATH = os.path.join(BASE_PATH, "model", "best_model.h5")
     os.makedirs(os.path.dirname(NEW_MODEL_PATH))
     shutil.copy(MODEL_PATH, NEW_MODEL_PATH)
+
+    # 5. create tmp directory for streamlit app
+    for mask_type in ["pred", "true"]:
+        os.makedirs(os.path.join(BASE_PATH, f"apps/tmp/{mask_type}"))
 
 
 if __name__ == "__main__":
