@@ -35,6 +35,12 @@ tasks:
     cpu: 2
     memory: 4
 
+  - type: run_session
+    name: Create model training jobs
+    script: scripts/create_train_experiments.py
+    cpu: 1
+    memory: 2
+
   - type: start_application
     short_summary: Starting tensorboard
     name: Tensorboard Training Logs
