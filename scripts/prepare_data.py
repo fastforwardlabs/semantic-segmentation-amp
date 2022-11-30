@@ -15,12 +15,15 @@ else:
     res = None
 
 # check if download was successful and set dataset path accordingly
-if res == 0 and os.path.exists("/home/cdsw/data/train.csv"):
-    os.environ["DATASET_DIR"] = "/home/cdsw/data/"
+BASE_PATH = "/home/cdsw"
+if res == 0 and os.path.exists(os.path.join(BASE_PATH, "data/train.csv")):
+    os.environ["DATASET_DIR"] = os.path.join(BASE_PATH, "data")
     print("Successfully downloaded data from Kaggle!")
 else:
-    os.environ["DATASET_DIR"] = "/home/cdsw/sample_data/"
-    os.system("tar -xvf /home/cdsw/sample_data.tar.gz")
+    os.environ["DATASET_DIR"] = os.path.join(BASE_PATH, os.environ["DATASET_DIR"])
+    os.system(
+        f"tar -xvf /home/cdsw/sample_data.tar.gz --directory {os.environ['DATASET_DIR']}"
+    )
     print("Could not download data from Kaggle, using sample data instead.")
     print("Response: ", res)
 
