@@ -2,7 +2,7 @@ import os
 from src.dataset import SegmentationDataset
 
 # check if API creds were provided
-if os.getenv("KAGGLE_USERNAME") is not "" and os.getenv("KAGGLE_API_KEY") is not "":
+if os.getenv("KAGGLE_USERNAME") != "" and os.getenv("KAGGLE_API_KEY") != "":
 
     # try to download data
     res = os.system(
@@ -11,6 +11,8 @@ if os.getenv("KAGGLE_USERNAME") is not "" and os.getenv("KAGGLE_API_KEY") is not
         mv severstal-steel-defect-detection.zip data/severstal-steel-defect-detection.zip && \
         unzip data/severstal-steel-defect-detection.zip -d ~/data"
     )
+else:
+    res = None
 
 # check if download was successful and set dataset path accordingly
 if res == 0 and os.path.exists("/home/cdsw/data/train.csv"):
