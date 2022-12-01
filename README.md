@@ -10,8 +10,8 @@ The goal of this application is to demonstrate how to use TensorFlow's `tf.data`
 
 ```
 .
-├── logs								   # log files from experimental training runs used by tensorboard
-├── images								   # static images and assets
+├── logs                                   # log files from experimental training runs used by tensorboard
+├── images                                 # static images and assets
 ├── requirements.txt
 ├── setup.py
 ├── LICENSE
@@ -19,25 +19,24 @@ The goal of this application is to demonstrate how to use TensorFlow's `tf.data`
 ├── .project-metadata.yaml                 # declarative specification for AMP logic
 ├── sample_data.tar.gz                     # small sample of dataset used for visualization
 ├── apps
-│   ├── app.py                       	   # Streamlit application to visualize predictions
+│   ├── app.py                             # Streamlit application to visualize predictions
 │   ├── app_utils.py                       # Utility functions for application
-│   └── tmp                   			   # Working directory for tmp files
+│   └── tmp                                # Working directory for tmp files
 ├── scripts
 │   ├── install_dependencies.py            # commands to install python package dependencies
 │   ├── prepare_data.py                    # prepares data and model assets for use by AMP
 │   ├── create_train_experiments.py        # uses CML APIv2 to create training jobs
-│   ├── run_train.py					   # CLI enabled script to launch training jobs
-│   ├── launch_tensorboard.py			   # script to launch tensorboard application
-│   └── launch_app.py					   # script to launch streamlit application
+│   ├── run_train.py                       # CLI enabled script to launch training jobs
+│   ├── launch_tensorboard.py              # script to launch tensorboard application
+│   └── launch_app.py                      # script to launch streamlit application
 ├── notebooks
-│   ├── Severstal_EDA.ipynb		           # exploratory data analysis
+│   ├── Severstal_EDA.ipynb                # exploratory data analysis
 │   ├── Data_Pipeline_Walkthrough.ipynb    # example of how to use AMP's data and pipeline classes
 │   └── Model_Evaluation.ipynb             # example of utility functions for evaluating model performance
 └── src
-    ├── dataset.py                         # module with custom SegmentationDataset class
     ├── data_pipeline.py                   # module with custom SegmentationDataPipeline class
-    ├── model.py                   		   # unet model implementation
-    ├── train.py                   		   # training script used by training experiments
+    ├── model.py                           # unet model implementation
+    ├── train.py                           # training script used by training experiments
     ├── data_utils.py                      # utility functions for data needs
     └── model_utils.py                     # utility functions for modeling needs
 
