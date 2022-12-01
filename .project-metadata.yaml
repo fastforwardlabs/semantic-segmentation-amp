@@ -1,6 +1,6 @@
 name: Detecting Defects with Semantic Segmentation
 description: >-
-  A demonstration of how semantic segmentation can be used to detect defects in manufacturing images. 
+  A demonstration of how semantic segmentation can be used to detect defects in manufacturing images.
 author: Cloudera Inc.
 specification_version: 1.0
 prototype_version: 2.0
@@ -45,7 +45,7 @@ tasks:
     short_summary: Starting tensorboard
     name: Tensorboard Training Logs
     subdomain: tensorboard
-    script: cml/launch_tensorboard.py
+    script: scripts/launch_tensorboard.py
     environment_variables:
       TASK_TYPE: START_APPLICATION
     cpu: 1
@@ -55,7 +55,7 @@ tasks:
     short_summary: Starting streamlit application
     name: Manufacturing Defect Detection
     subdomain: streamlit
-    script: cml/launch_app.py
+    script: scripts/launch_app.py
     environment_variables:
       TASK_TYPE: START_APPLICATION
     cpu: 2
