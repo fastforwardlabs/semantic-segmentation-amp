@@ -55,15 +55,19 @@ if "current_x" not in st.session_state.keys():
 # st.write("samples dict:", st.session_state["samples_dict"])
 
 st.title(":mag: Manufacturing Defect Detection")
+
 st.write(
-    "This application is intended to help visualize the quality of segmentation mask predictions on the manufacturing \
-    dataset of steel image samples. Analyzing various defects helps build intuition around a given models strengths and shortcomings."
+    "The computer vision task of _semantic segmentation_ involves predicting the label of each pixel in an image with a corresponding \
+    class of what that pixel represents. This application is intended to help visualize the quality of segmentation mask predictions on the \
+    [Severstal Steel Defect Detection](https://www.kaggle.com/competitions/severstal-steel-defect-detection/overview) dataset - a dataset of \
+    steel sample images with several types of surface defects. Analyzing various defects helps build intuition around a segmentation models' strengths and shortcomings."
 )
 st.write(
-    "To get started, select the defect type you'd like to visualize. Then, click 'Predict Segmentation Masks' to generate mask predictions.\
-        These can be visualized as individual channels (one for each defect class) or overlayed on the actual image together. In either case, \
+    "To get started, select the defect type you'd like to visualize (on the left). Then, click 'Predict Segmentation Masks' to generate mask predictions.\
+        The mask predictions can be visualized as individual channels (one for each defect class) or overlayed on the actual image together. In either case, \
         we provide a side-by-side comparison with the ground truth segmentation masks for quick assessment of quality."
 )
+st.write("")
 
 # ------------------------- SIDEBAR -------------------------
 ffl_logo = plt.imread("images/ffllogo2@1x.png")
@@ -82,13 +86,12 @@ with st.sidebar:
         st.session_state["defect_type"] = defect_type_selector
         get_next_example()
 
-    st.sidebar.markdown("## Next example")
+    st.sidebar.markdown("## Try another image")
     st.sidebar.caption(
-        "This application is intended to be run sequentially from top to bottom. If you wish to visualize segmentation mask \
-        predictions for a different image or defect type, click the button below."
+        "Click the button below if you wish to visualize segmentation mask predictions for a different image of the selected defect type."
     )
     next_example = st.button(
-        "Try another image",
+        "Next example",
         on_click=get_next_example,
     )
 
