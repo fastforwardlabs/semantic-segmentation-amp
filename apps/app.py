@@ -46,13 +46,6 @@ if "defect_type" not in st.session_state:
 # initialize selected example from queue
 if "current_x" not in st.session_state.keys():
     get_next_example()
-    # toggle_show_masks()  # this only gets run here because we're intializing
-
-# st.write("current x:", st.session_state["current_x"])
-# st.write("show masks:", st.session_state["show_masks"])
-# st.write("defect type:", st.session_state["defect_type"])
-# st.write("class index tracker:", st.session_state["class_index_tracker"])
-# st.write("samples dict:", st.session_state["samples_dict"])
 
 st.title(":mag: Manufacturing Defect Detection")
 

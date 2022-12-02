@@ -117,6 +117,10 @@ def build_samples_queue(dataset, n_samples=100):
 
 
 def prepare_visual_assets(x, y, pipeline, model):
+    """
+    Uses the provided model, an image example (x), aground truth (y), and a
+    data pipeline class to generate a mask prediction.
+    """
 
     ds = pipeline([x], [y], is_train=False)
     sample = list(ds.take(1).as_numpy_iterator())[0]
@@ -129,8 +133,6 @@ def prepare_visual_assets(x, y, pipeline, model):
 
 
 def toggle_show_masks():
-
-    # toggle show masks
     st.session_state["show_masks"] = not st.session_state["show_masks"]
 
 
@@ -189,7 +191,6 @@ def get_next_example():
 
 
 def save_channel_imgs(y, type="pred"):
-
     """
     Generates and saves segmentation masks for each channel in the given
     set of masks.
@@ -212,6 +213,14 @@ def save_channel_imgs(y, type="pred"):
 
 
 def save_mask_overlay_image(x, y, shape=(256, 1600), n_channels=3, type="pred"):
+    """
+    Generates and saves an image with segmentation masks overlayed.
+
+    Args:
+        x (np.ndarray) - of shape 1xhxwxc
+        y (np.ndarray) - of shape 1xhxwxc
+        type (str) = "pred" or "true"
+    """
 
     mask = create_mask(y, n_channels=n_channels)
 
