@@ -191,14 +191,7 @@ def train_model(
         tf.keras.callbacks.TensorBoard(
             log_dir=log_dir, update_freq=100, histogram_freq=1, write_images=True
         ),
-        tf.keras.callbacks.LearningRateScheduler(lr_scheduler, verbose=1)
-        # tf.keras.callbacks.EarlyStopping(
-        #     monitor="dice_coef",
-        #     patience=25,
-        #     verbose=1,
-        #     mode="max",
-        #     restore_best_weights=True,
-        # ),
+        tf.keras.callbacks.LearningRateScheduler(lr_scheduler, verbose=1),
     ]
 
     hist = unet.fit(
@@ -209,4 +202,3 @@ def train_model(
     )
 
     return hist, test_dataset
-    # return unet, callbacks
