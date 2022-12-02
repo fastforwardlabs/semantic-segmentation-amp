@@ -4,12 +4,10 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
-from sklearn.utils.class_weight import compute_class_weight
 from imblearn.over_sampling import RandomOverSampler
 from imblearn.under_sampling import RandomUnderSampler
 
 from src.data_utils import (
-    rle2mask,
     prepare_mask_label,
     add_background_channel,
     calculate_class_weight_map_ip,
@@ -76,7 +74,7 @@ class SegmentationDataset:
             df = self._drop_imgs_by_class(df, class_ids_to_drop=[0, 1, 2])
         return df
 
-    def _load_dataset(self, label_file, img_dir_path):
+    def _load_dataset(self, label_file, img_dir_path, use_non_defective=False):
         """
         Prepares a dataframe with all images and corresponding masks.
 
@@ -87,6 +85,7 @@ class SegmentationDataset:
         Args:
             annotations_path (str) - path to annotations csv file
             img_path (str) - path to corresponding images directory
+            use_non_defective (bool) - whether to include non-defective images
 
         Returns:
             pd.DataFrame
@@ -94,12 +93,13 @@ class SegmentationDataset:
         df = pd.read_csv(label_file)
         img_paths = os.listdir(img_dir_path)
 
-        non_defect_imgs = list(set(img_paths) - set(df.ImageId))
-        non_defect_imgs_df = pd.DataFrame(
-            {"ImageId": non_defect_imgs, "ClassId": 0, "EncodedPixels": -1}
-        )
+        if use_non_defective:
+            non_defect_imgs = list(set(img_paths) - set(df.ImageId))
+            non_defect_imgs_df = pd.DataFrame(
+                {"ImageId": non_defect_imgs, "ClassId": 0, "EncodedPixels": -1}
+            )
 
-        # df = pd.concat([df, non_defect_imgs_df]).reset_index(drop=True)
+            df = pd.concat([df, non_defect_imgs_df]).reset_index(drop=True)
 
         return df
 

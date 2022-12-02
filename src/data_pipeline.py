@@ -1,13 +1,13 @@
 import numpy as np
 import tensorflow as tf
 
-from src.data_utils import rle2mask, prepare_mask_label, add_background_channel
+from src.data_utils import prepare_mask_label, add_background_channel
 
 
 class SegmentationDataPipeline:
     """
     Callable utility class for creating TensorFlow data pipelines
-    from SegementationDataset sequences.
+    from SegementationDataset sequences with optional pipeline optimization settings.
 
     Args:
         img_shape (tuple)
@@ -64,14 +64,11 @@ class SegmentationDataPipeline:
 
         elif self.label_type == "preprocessed":
             label_ds = (
-                tf.data.Dataset.from_tensor_slices(label_seq).map(
+                tf.data.Dataset.from_tensor_slices(label_seq)
+                .map(
                     self.load_image,
                     num_parallel_calls=self.pipeline_options["map_parallel"],
                 )
-                # .map(
-                #     self.tf_add_background_channel,
-                #     num_parallel_calls=self.pipeline_options["map_parallel"],
-                # )
                 .map(
                     self.normalize,
                     num_parallel_calls=self.pipeline_options["map_parallel"],
@@ -85,13 +82,9 @@ class SegmentationDataPipeline:
 
         else:
             zip_ds = tf.data.Dataset.zip((img_ds, label_ds))
-            # .map(
-            #     self.normalize,
-            #     num_parallel_calls=self.pipeline_options["map_parallel"],
-            # )
 
         if is_train:
-            print("AUGMENTING!!")
+            print("Augmenting")
             zip_ds = zip_ds.map(
                 self.augment, num_parallel_calls=self.pipeline_options["map_parallel"]
             )
@@ -117,12 +110,6 @@ class SegmentationDataPipeline:
         return zip_ds
 
     def load_image(self, img_path):
-        """
-        Loads and preprocesses image given a path.
-
-        Args:
-            img_path (str)
-        """
 
         img = tf.io.read_file(img_path)
         img = tf.image.decode_jpeg(img)
@@ -170,17 +157,11 @@ class SegmentationDataPipeline:
 
         return mask[0]
 
-    # def normalize(self, image, mask):
-    #     image = tf.cast(image, tf.float32) / 255.0
-    #     mask = tf.cast(mask, tf.float32) / 255.0
-    #     return image, mask
-
     def normalize(self, image):
         image = tf.cast(image, tf.float32) / 255.0
         return image
 
     def augment(self, image, mask, sample_weight=None):
-        # input_image, input_mask = img_and_mask
 
         if tf.random.uniform(()) > 0.5:
             # Random flipping of the image and mask
