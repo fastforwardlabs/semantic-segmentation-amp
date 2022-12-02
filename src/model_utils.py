@@ -1,7 +1,7 @@
 import os
 import json
 from collections import defaultdict
-from typing import Optional, Dict, List
+from typing import Dict
 
 from tqdm import tqdm
 import numpy as np
@@ -12,6 +12,12 @@ import tensorflow as tf
 
 
 def dice_coef(y_true, y_pred, smooth=1e-6):
+    """
+    Dice similarity coefficient
+
+    Adapted from: https://github.com/nabsabraham/focal-tversky-unet
+
+    """
 
     # remove background channel from loss calculation
     y_true = y_true[:, :, :, 1:]
@@ -27,85 +33,12 @@ def dice_coef(y_true, y_pred, smooth=1e-6):
 
 
 def dice_loss(y_true, y_pred):
-    # Dice similarity coefficient loss, brought to you by: https://github.com/nabsabraham/focal-tversky-unet
+    """
+    Dice similarity coefficient loss
+
+    """
     loss = 1 - dice_coef(y_true, y_pred)
     return loss
-
-
-def bce_dice_loss(y_true, y_pred):
-    loss = tf.keras.losses.binary_crossentropy(y_true, y_pred) + dice_loss(
-        y_true, y_pred
-    )
-    return loss
-
-
-class TverskyLossAxis(tf.keras.losses.Loss):
-    def call(self, y_true, y_pred, smooth=1e-6, batch_size=8):
-
-        # remove background channel from loss calculation
-        y_true = y_true[:, :, :, 1:]
-        y_pred = y_pred[:, :, :, 1:]
-
-        axes = tuple(range(1, 4))  # compute over H x W x C, preserve batch dimension
-
-        true_pos = tf.reduce_sum(y_true * y_pred, axis=axes)
-        false_neg = tf.reduce_sum(y_true * (1 - y_pred), axis=axes)
-        false_pos = tf.reduce_sum((1 - y_true) * y_pred, axis=axes)
-        alpha = 0.7
-
-        num = true_pos + smooth
-        den = true_pos + alpha * false_neg + (1 - alpha) * false_pos + smooth
-
-        return 1 - (num / tf.reduce_sum(den)) * batch_size
-
-
-def tversky_axis(y_true, y_pred, smooth=1e-6, batch_size=8):
-    # Focal Tversky loss, brought to you by:  https://github.com/nabsabraham/focal-tversky-unet
-
-    # remove background channel from loss calculation
-    y_true = y_true[:, :, :, 1:]
-    y_pred = y_pred[:, :, :, 1:]
-
-    axes = tuple(range(1, 4))  # compute over H x W x C, preserve batch dimension
-
-    true_pos = tf.reduce_sum(y_true * y_pred, axis=axes)
-    false_neg = tf.reduce_sum(y_true * (1 - y_pred), axis=axes)
-    false_pos = tf.reduce_sum((1 - y_true) * y_pred, axis=axes)
-    alpha = 0.7
-
-    num = true_pos + smooth
-    den = true_pos + alpha * false_neg + (1 - alpha) * false_pos + smooth
-
-    # return num / tf.reduce_sum(den)
-    return (num / tf.reduce_sum(den)) * batch_size
-
-
-def tversky_loss_axis(y_true, y_pred):
-    return 1 - tversky_axis(y_true, y_pred)
-
-
-def tversky(y_true, y_pred, smooth=1e-6):
-    # Focal Tversky loss, brought to you by:  https://github.com/nabsabraham/focal-tversky-unet
-
-    # remove background channel from loss calculation
-    y_true = y_true[:, :, :, 1:]
-    y_pred = y_pred[:, :, :, 1:]
-
-    y_true_pos = tf.keras.layers.Flatten()(y_true)
-    y_pred_pos = tf.keras.layers.Flatten()(y_pred)
-    true_pos = tf.reduce_sum(y_true_pos * y_pred_pos)
-    false_neg = tf.reduce_sum(y_true_pos * (1 - y_pred_pos))
-    false_pos = tf.reduce_sum((1 - y_true_pos) * y_pred_pos)
-    alpha = 0.7
-
-    num = true_pos + smooth
-    den = true_pos + alpha * false_neg + (1 - alpha) * false_pos + smooth
-
-    return num / den
-
-
-def tversky_loss(y_true, y_pred):
-    return 1 - tversky(y_true, y_pred)
 
 
 # UTILITIES
@@ -289,91 +222,3 @@ def collect_experiment_scores(log_dir):
         zip(experiments, val_dice_score, val_loss),
         columns=["experiment", "val_dice_score", "val_loss"],
     )
-
-
-# OLD METRICS & LOSSES (to be deleted)
-
-# def dice_coeff_old(y_true, y_pred, epsilon=1e-6):
-#     """
-#     Soft dice loss calculation for arbitrary batch size, number of classes, and number of spatial dimensions.
-#     Assumes the `channels_last` format.
-
-#     Args:
-#         y_true: b x X x Y x c One hot encoding of ground truth
-#         y_pred: b x X x Y x c Network output, must sum to 1 over c channel (such as after softmax)
-#         epsilon: Used for numerical stability to avoid divide by zero errors
-#     """
-#     # remove background channel from loss calculation
-#     y_true = y_true[:, :, :, 1:]
-#     y_pred = y_pred[:, :, :, 1:]
-
-#     axes = tuple(range(1, 3))
-#     numerator = 2.0 * tf.reduce_sum((y_pred * y_true), axis=axes)
-#     # denominator = tf.reduce_sum(y_pred + y_true, axis=axes)
-#     denominator = tf.reduce_sum(y_pred, axis=axes) + tf.reduce_sum(y_true, axis=axes)
-
-#     # return tf.reduce_mean((numerator + epsilon) / (denominator + epsilon))
-#     return tf.reduce_mean(numerator + epsilon, axis=-1) / tf.reduce_mean(
-#         denominator + epsilon, axis=-1
-#     )  # CORRECTED_AXIS
-#     # return tf.reduce_mean(numerator + epsilon) / tf.reduce_mean(
-#     #     denominator + epsilon
-#     # )  # CORRECTED
-
-
-# def dice_loss_old(y_true, y_pred):
-#     # Dice similarity coefficient loss, brought to you by: https://github.com/nabsabraham/focal-tversky-unet
-#     loss = 1 - dice_coeff_old(y_true, y_pred)
-#     return loss
-
-# def tversky(y_true, y_pred, smooth=1e-6):
-#     # Focal Tversky loss, brought to you by:  https://github.com/nabsabraham/focal-tversky-unet
-
-#     # remove background channel from loss calculation
-#     y_true = y_true[:, :, :, 1:]
-#     y_pred = y_pred[:, :, :, 1:]
-
-#     y_true_pos = tf.keras.layers.Flatten()(y_true)
-#     y_pred_pos = tf.keras.layers.Flatten()(y_pred)
-#     true_pos = tf.reduce_sum(y_true_pos * y_pred_pos)
-#     false_neg = tf.reduce_sum(y_true_pos * (1 - y_pred_pos))
-#     false_pos = tf.reduce_sum((1 - y_true_pos) * y_pred_pos)
-#     alpha = 0.7
-#     return (true_pos + smooth) / (
-#         true_pos + alpha * false_neg + (1 - alpha) * false_pos + smooth
-#     )
-
-
-# def tversky_loss(y_true, y_pred):
-#     return 1 - tversky(y_true, y_pred)
-
-
-# def focal_tversky_loss(y_true, y_pred):
-#     pt_1 = tversky(y_true, y_pred)
-#     gamma = 0.75
-#     return tf.keras.backend.pow((1 - pt_1), gamma)
-
-# def evaluate_per_class_dice(dataset: tf.data.Dataset, model) -> Dict:
-#     """
-#     Evaluates a model on a given dataset to calculate _per class_ dice similarity coefficient.
-
-#     Args:
-#         dataset - tf dataset upon which to run evaluation
-#         model - trained UNet model to use for inference
-
-#     Returns:
-#         class_scores
-
-#     """
-
-#     class_scores = defaultdict(list)
-
-#     for x, y_true in tqdm(dataset):
-#         y_pred = model.predict(x)
-
-#         batch_score = dice_coeff_per_class(y_true, y_pred)
-
-#         for k, v in batch_score.items():
-#             class_scores[k].append(v)
-
-#     return {k: np.mean(v) for k, v in class_scores.items()}
