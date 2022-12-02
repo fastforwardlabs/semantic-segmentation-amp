@@ -3,12 +3,10 @@ from keras.layers import (
     Input,
     Conv2D,
     MaxPooling2D,
-    UpSampling2D,
     Concatenate,
     Conv2DTranspose,
     BatchNormalization,
     Dropout,
-    Lambda,
     Activation,
 )
 
@@ -39,6 +37,18 @@ def decoder_block(x, skip_features, n_filters):
 
 
 def unet_model(input_shape, n_channels_out, n_channels_bottleneck=1024):
+    """
+    Implementation of Unet architecture in Keras
+
+    https://arxiv.org/pdf/1505.04597.pdf
+
+    Args:
+        input_shape (tuple)
+        n_channels_out (int) - number of channels in ouputer layer
+        n_channels_bottleneck (int, optional) - number of channels in bottleneck layer
+
+
+    """
 
     input_shape = input_shape + (3,)
     inputs = Input(input_shape)
