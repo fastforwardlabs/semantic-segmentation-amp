@@ -79,9 +79,7 @@ def prepare_data():
         print("Successfully downloaded data from Kaggle!")
     else:
         set_dataset_path(path=os.path.join(BASE_PATH, "sample_data"))
-        os.system(
-            f"tar -xvf /home/cdsw/sample_data.tar.gz && mv /home/cdsw/sample_data {os.path.join(BASE_PATH, "sample_data")}"
-        )
+        os.system(f"tar -xvf /home/cdsw/sample_data.tar.gz")
 
         print("Could not download data from Kaggle, using sample data instead.")
         print("Response: ", res)
