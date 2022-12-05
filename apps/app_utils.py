@@ -49,7 +49,7 @@ import matplotlib.patches as mpatches
 
 from src.dataset import SegmentationDataset
 from src.data_pipeline import SegmentationDataPipeline
-from src.data_utils import create_mask, get_dataset_path()
+from src.data_utils import create_mask, get_dataset_path
 from src.model_utils import (
     dice_coef,
 )
