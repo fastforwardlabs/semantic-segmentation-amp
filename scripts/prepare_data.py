@@ -63,7 +63,6 @@ def prepare_data():
 
     # 1. check if API creds were provided
     if os.getenv("KAGGLE_USERNAME") != "" and os.getenv("KAGGLE_API_KEY") != "":
-clea
         # try to download data
         res = os.system(
             "mkdir data && \
@@ -75,20 +74,20 @@ clea
         res = None
 
     # 2. check if download was successful and set dataset path accordingly
-    DATASET_DIR = get_dataset_path()
     if res == 0 and os.path.exists(os.path.join(BASE_PATH, "data/train.csv")):
         set_dataset_path(path=os.path.join(BASE_PATH, "data"))
         print("Successfully downloaded data from Kaggle!")
     else:
         set_dataset_path(path=os.path.join(BASE_PATH, "sample_data"))
         os.system(
-            f"tar -xvf /home/cdsw/sample_data.tar.gz && mv /home/cdsw/sample_data {DATASET_DIR}"
+            f"tar -xvf /home/cdsw/sample_data.tar.gz && mv /home/cdsw/sample_data {os.path.join(BASE_PATH, "sample_data")}"
         )
 
         print("Could not download data from Kaggle, using sample data instead.")
         print("Response: ", res)
 
     # 3. instantiate dataset, then preprocess and save out mask annotations as .pngs
+    DATASET_DIR = get_dataset_path()
     IMG_SHAPE = (256, 1600)
     ANNOTATIONS_PATH = os.path.join(DATASET_DIR, "train.csv")
     TRAIN_IMG_PATH = os.path.join(DATASET_DIR, "train_images")
