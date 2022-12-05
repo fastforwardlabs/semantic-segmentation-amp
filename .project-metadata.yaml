@@ -13,9 +13,6 @@ environment_variables:
   KAGGLE_KEY:
     default: ""
     description: "Optional Kaggle account API token associated with username provided above"
-  DATASET_DIR:
-    default: "sample_data"
-    description: "Directory to hold sample data assets"
 
 runtimes:
   - editor: Workbench

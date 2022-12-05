@@ -43,6 +43,7 @@ import shutil
 
 from src.dataset import SegmentationDataset
 from src.model_utils import collect_experiment_scores
+from src.data_utils import set_dataset_path, get_dataset_path
 
 BASE_PATH = "/home/cdsw"
 LOG_DIR = os.path.join(BASE_PATH, "logs")
@@ -62,7 +63,7 @@ def prepare_data():
 
     # 1. check if API creds were provided
     if os.getenv("KAGGLE_USERNAME") != "" and os.getenv("KAGGLE_API_KEY") != "":
-
+clea
         # try to download data
         res = os.system(
             "mkdir data && \
@@ -74,13 +75,14 @@ def prepare_data():
         res = None
 
     # 2. check if download was successful and set dataset path accordingly
+    DATASET_DIR = get_dataset_path()
     if res == 0 and os.path.exists(os.path.join(BASE_PATH, "data/train.csv")):
-        os.environ["DATASET_DIR"] = os.path.join(BASE_PATH, "data")
+        set_dataset_path(path=os.path.join(BASE_PATH, "data"))
         print("Successfully downloaded data from Kaggle!")
     else:
-        os.environ["DATASET_DIR"] = os.path.join(BASE_PATH, os.environ["DATASET_DIR"])
+        set_dataset_path(path=os.path.join(BASE_PATH, "sample_data"))
         os.system(
-            f"tar -xvf /home/cdsw/sample_data.tar.gz && mv /home/cdsw/sample_data {os.environ['DATASET_DIR']}"
+            f"tar -xvf /home/cdsw/sample_data.tar.gz && mv /home/cdsw/sample_data {DATASET_DIR}"
         )
 
         print("Could not download data from Kaggle, using sample data instead.")
@@ -88,8 +90,8 @@ def prepare_data():
 
     # 3. instantiate dataset, then preprocess and save out mask annotations as .pngs
     IMG_SHAPE = (256, 1600)
-    ANNOTATIONS_PATH = os.path.join(os.environ["DATASET_DIR"], "train.csv")
-    TRAIN_IMG_PATH = os.path.join(os.environ["DATASET_DIR"], "train_images")
+    ANNOTATIONS_PATH = os.path.join(DATASET_DIR, "train.csv")
+    TRAIN_IMG_PATH = os.path.join(DATASET_DIR, "train_images")
 
     sd = SegmentationDataset(
         label_file=ANNOTATIONS_PATH,

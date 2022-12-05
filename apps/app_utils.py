@@ -49,22 +49,23 @@ import matplotlib.patches as mpatches
 
 from src.dataset import SegmentationDataset
 from src.data_pipeline import SegmentationDataPipeline
-from src.data_utils import create_mask
+from src.data_utils import create_mask, get_dataset_path()
 from src.model_utils import (
     dice_coef,
 )
 
 BATCH_SIZE = 1
 IMG_SHAPE = (256, 1600)
-ANNOTATIONS_PATH = os.path.join(os.environ["DATASET_DIR"], "train.csv")
-TRAIN_IMG_PATH = os.path.join(os.environ["DATASET_DIR"], "train_images")
+DATASET_DIR = get_dataset_path()
+ANNOTATIONS_PATH = os.path.join(DATASET_DIR, "train.csv")
+TRAIN_IMG_PATH = os.path.join(DATASET_DIR, "train_images")
 MODEL_PATH = "model/best_model.h5"
 LOSSES = {
     "categorical_crossentropy": tf.keras.losses.CategoricalCrossentropy(),
 }
 METRICS = {"dice_coef": dice_coef}
 CLASS_MAP = {"Scratches": 3, "Patches": 4, "Scratches & Patches": -2}
-USE_TEST_SET = True if os.getenv("DATASET_DIR") == "/home/cdsw/data" else False
+USE_TEST_SET = True if DATASET_DIR == "/home/cdsw/data" else False
 
 
 @st.cache

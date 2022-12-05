@@ -38,6 +38,8 @@
 #
 # ###########################################################################
 
+import os
+import json
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -339,3 +341,29 @@ def calculate_class_weight_map_ens(beta, samples_per_cls, classes):
     weights = weights / np.sum(weights) * len(classes)
 
     return dict(zip(classes, np.around(weights, 4)))
+
+def set_dataset_path(path):
+    """
+    Create a hidden file that specifies the proper directory
+    path to either the `data` or `sample_data` directory.
+
+    Args:
+        path (str) - full path to data directory
+    """
+
+    with open(os.path.join(os.path.expanduser("~"), ".dataset_dir.json"), "w") as f:
+        json.dump({"path": path}, f)
+
+        
+def get_dataset_path():
+    """
+    Reads the ~/.dataset_dir.json object and returns the dataset directory
+
+    See set_dataset_path_flag() for more details.
+
+    """
+
+    with open(os.path.join(os.path.expanduser("~"), ".dataset_dir.json"), "r") as f:
+        dataset_dir = json.load(f)
+
+    return dataset_dir["path"]
