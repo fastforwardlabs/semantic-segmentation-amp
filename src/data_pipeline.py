@@ -49,6 +49,12 @@ class SegmentationDataPipeline:
     Callable utility class for creating TensorFlow data pipelines
     from SegementationDataset sequences with optional pipeline optimization settings.
 
+    Specifically, the user should specify image shape, whether the labels are "preprocessed"
+    or "inline", and which `tf.data` pipeline optimizations to apply upon class instantiation.
+
+    For more details on pipeline optimizations, see:
+         https://www.tensorflow.org/guide/data_performance
+
     Args:
         img_shape (tuple)
         label_type (str) - "preprocessed" or "inline"
@@ -73,6 +79,22 @@ class SegmentationDataPipeline:
         self.pipeline_options = pipeline_options
 
     def __call__(self, img_seq, label_seq, is_train=True, sample_weights=None):
+        """
+        Apply `tf.data` transformations to the provided img_seq and label_seq to
+        return a `tf.Dataset` that can be used for model training.
+
+        For more info on usage, see `/notebooks/Data_Pipeline_Walkthrough.ipynb`.
+
+        Args:
+            img_seq (list) - list of sequence elements
+            label_seq (list) - list of label elements
+            is_train (bool, optional) - if training pipeline, this applies horizontal
+                 flips as form of data augmentation
+            sample_weights (list) - list of sample weights
+
+        Returns:
+            tf.data.Dataset
+        """
 
         img_ds = (
             tf.data.Dataset.from_tensor_slices(img_seq)
@@ -150,6 +172,9 @@ class SegmentationDataPipeline:
         return zip_ds
 
     def load_image(self, img_path):
+        """
+        Loads an image from provided path and returns as tf.Tensor
+        """
 
         img = tf.io.read_file(img_path)
         img = tf.image.decode_jpeg(img)
@@ -158,21 +183,12 @@ class SegmentationDataPipeline:
 
         return img
 
-    def load_mask_label(self, mask_label_path):
-        mask = np.load(mask_label_path.numpy().decode())
-        return mask
-
-    def tf_load_mask_label(self, mask_label_path):
-
-        mask = tf.py_function(
-            func=self.load_mask_label,
-            inp=[mask_label_path],
-            Tout=[tf.float32],
-        )
-
-        return mask[0]
-
     def tf_add_background_channel(self, mask):
+        """
+        Adds a background channel to a segmentation mask tensor
+        of defects. This is needed for the lost function to softmax
+        correctly.
+        """
 
         mask = tf.py_function(
             func=add_background_channel,
@@ -198,10 +214,17 @@ class SegmentationDataPipeline:
         return mask[0]
 
     def normalize(self, image):
+        """
+        Normalize pixel values between 0 and 1
+        """
         image = tf.cast(image, tf.float32) / 255.0
         return image
 
     def augment(self, image, mask, sample_weight=None):
+        """
+        Randomly apply horizontal flips as form of
+        data augmentation at train time
+        """
 
         if tf.random.uniform(()) > 0.5:
             # Random flipping of the image and mask
