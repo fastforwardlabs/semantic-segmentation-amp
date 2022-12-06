@@ -4,7 +4,7 @@ A demonstration of how the computer vision task of semantic segmentation can be 
 
 ![](images/app_preview.png)
 
-The goal of this application is to demonstrate how TensorFlow's `tf.data` API can be used in combination with Keras to train a semantic segmentation model on a defect detection use case. In addition, we also experiment with several methods for dealing class imbalance, a common issue for many real-world modeling use cases. These ideas are explored through the [Severstal Steel Defect Detection](https://www.kaggle.com/competitions/severstal-steel-defect-detection/overview) dataset - a dataset comprised of images of steel surface defects taken from high frequency cameras used to assess manufacturing quality.
+The goal of this application is to demonstrate how TensorFlow's `tf.data` API can be used in combination with Keras to train a semantic segmentation model on a defect detection use case. In addition, we also experiment with several methods for dealing class imbalance, a common issue for many real-world modeling use cases. These ideas are explored through the [Severstal Steel Defect Detection](https://www.kaggle.com/competitions/severstal-steel-defect-detection/overview) dataset - a dataset comprised of images of steel surface defects taken from high frequency cameras used to assess manufacturing quality. This project only uses a subset of the full dataset (defect classes 3 & 4) to simplify the modeling problem.
 
 ## Project Structure
 
@@ -58,3 +58,5 @@ This AMP was developed against Python 3.9. There are two ways to launch the proj
 
 1. **From Prototype Catalog** - Navigate to the AMPs tab on a CML workspace, select the "Detecting Defects with Semantic Segmentation" tile, click "Launch as Project", click "Configure Project"
 2. **As an AMP** - In a CML workspace, click "New Project", add a Project Name, select "AMPs" as the Initial Setup option, copy in this repo URL, click "Create Project", click "Configure Project"
+
+> **Note** - In order to run the `Severstal_EDA.ipynb` and `Data_Pipeline_Walkthrough.ipynb` notebooks, you'll need to launch a Jupyter session with at least 2vCPU & 4GB RAM. For the `Model_Evaluation.ipynb`, you'll need a Jupyter session with at least 4vCPU & 8GB RAM.
